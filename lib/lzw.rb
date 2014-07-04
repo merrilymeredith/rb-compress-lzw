@@ -1,19 +1,28 @@
-
 module LZW
 
-  class Compress
-    attr_reader :block_mode, :lsb_first, :max_code_size, :init_code_size
+  class Simple
+    def compress ( data )
+      LZW::Compressor.new.compress( data )
+    end
+
+    def decompress ( data )
+      LZW::Decompressor.new.decompress( data )
+    end
+  end
+  
+  class Compressor
+    attr_reader :block_mode, :big_endian, :max_code_size, :init_code_size
 
     def initialize (
       block_mode:     true,
-      lsb_first:      nil,
+      big_endian:      nil,
       init_code_size: 9,
       max_code_size:  16
     )
       @block_mode = block_mode
       
-      if lsb_first.nil?
-        @lsb_first = LZW::lsb_first
+      if big_endian.nil?
+        @big_endian = LZW::big_endian
       end
 
       if init_code_size > max_code_size 
@@ -34,6 +43,7 @@ module LZW
 
     def compress( data )
       self.reset()
+
     end
 
     def reset
@@ -43,13 +53,16 @@ module LZW
     end
 
   end
-  class Decompress
+
+  class Decompressor
+    def decompress ( data )
+      
+    end
   end
 
 
-  def self.lsb_first
-    #FINISHME: how to detect in ruby?
-
+  def self.big_endian
+    [1].pack("I") == [1].pack("N")
   end
 
 end

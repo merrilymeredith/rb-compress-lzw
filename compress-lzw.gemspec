@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'compress-lzw'
-  s.version     = '0.0.0'
+  s.version     = '0.0.1'
   s.date        = '2014-03-20'
   s.summary     = "LZW compression implementation"
   s.description = ""
