@@ -11,7 +11,7 @@ describe LZW::Simple do
   end
 
   it "compresses simple data" do
-    LZW::Simple.new.compress( LOREM ).must_be :<, LOREM.length
+    LZW::Simple.new.compress( LOREM ).length.must_be :<, LOREM.length
   end
 
   it "decompresses that simple data exactly" do
