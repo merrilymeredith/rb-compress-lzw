@@ -1,5 +1,10 @@
 module LZW
 
+  MAGIC      = "\037\235".force_encoding('BINARY')
+  MASK_BITS  = 0x1f
+  MASK_BLOCK = 0x80
+  RESET_CODE = 256
+
   class Simple
     def compress ( data )
       LZW::Compressor.new.compress( data )
@@ -21,7 +26,9 @@ module LZW
       init_code_size: 9,
       max_code_size:  16
     )
-      @block_mode = block_mode
+      @block_mode     = block_mode
+      @init_code_size = init_code_size
+      @max_code_size  = max_code_size
       
       if big_endian.nil?
         @big_endian = LZW::big_endian
@@ -39,19 +46,29 @@ module LZW
         raise "init_code_size must be greater than 8"
       end
 
-      @init_code_size = init_code_size
-      @max_code_size  = max_code_size
+      @buf     = magic
+      @buf_pos = @buf.size * 8
     end
 
     def compress( data )
-      self.reset()
+      reset
 
+      @buf << data
     end
+
+    private
 
     def reset
       @code_table = {}
       @code_size  = @init_code_size
       @next_code  = 257
+    end
+
+    def magic
+      MAGIC + (
+        ( @max_code_size & MASK_BITS ) |
+        ( @block_mode ? MASK_BLOCK : 0 )
+      ).chr
     end
 
   end
