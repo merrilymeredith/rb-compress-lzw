@@ -1,9 +1,13 @@
 module LZW
 
-  MAGIC      = "\037\235".force_encoding('BINARY')
+  MAGIC      = "\037\235".b
   MASK_BITS  = 0x1f
   MASK_BLOCK = 0x80
   RESET_CODE = 256
+
+  def self.big_endian
+    [1].pack("I") == [1].pack("N")
+  end
 
   class Simple
     def compress ( data )
@@ -73,6 +77,7 @@ module LZW
 
   end
 
+
   class Decompressor
     def decompress ( data )
       
@@ -80,10 +85,94 @@ module LZW
   end
 
 
-  def self.big_endian
-    [1].pack("I") == [1].pack("N")
-  end
+  class BitBuf
+    include Enumerable
 
+    # Derived from Gene Hsu's work at
+    # https://github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb
+    # but it wasn't worth inheriting from an unaccepted pull to a gem that's
+    # unmaintained.
+
+    # I'm forcing this to default-0 for bits, making a fixed size
+    # unnecessary, and supporting both endians.  And changing the
+    # interface, so I shouldn't subclass anyway.
+
+    AND_BITMASK = %w[
+      01111111
+      10111111
+      11011111
+      11101111
+      11110111
+      11111011
+      11111101
+      11111110
+    ].map{|w| [w].pack("b8").getbyte(0) }.freeze
+
+    OR_BITMASK = %w[
+      10000000
+      01000000
+      00100000
+      00010000
+      00001000
+      00000100
+      00000010
+      00000001
+    ].map{|w| [w].pack("b8").getbyte(0) }.freeze
+
+    attr_reader :big_endian, :field
+
+    def initialize (
+      field:      "\000",
+      big_endian: LZW::big_endian
+    )
+
+      @field      = field.b
+      @big_endian = big_endian
+    end
+
+    def []= ( pos, val )
+      byte, bit = byte_divmod(pos)
+
+      # puts "be:#{@big_endian} p:#{pos} B:#{byte} b:#{bit} = #{val}  (#{self[pos]})"
+
+      case val
+      when 0
+        @field.setbyte( byte,
+                       @field.getbyte(byte) & AND_BITMASK[bit] )
+      when 1
+        @field.setbyte( byte,
+                       @field.getbyte(byte) | OR_BITMASK[bit] )
+      else
+        throw "Only 0 and 1 are valid for a bit field"
+      end
+    end
+
+    def [] ( pos )
+      byte, bit = byte_divmod(pos)
+
+      (@field.getbyte(byte) >> bit ) & 1
+    end
+
+    def each ( &block )
+      ( @field.bytesize * 8 ).times do |pos|
+        yield self[pos]
+      end
+    end
+
+    private
+
+    def byte_divmod ( pos )
+      byte, bit = pos.divmod(8)
+
+      if byte > @field.bytesize - 1
+        # puts "grow to byte #{byte}"
+        @field << "\000"
+      end
+
+      [ byte, big_endian ? (7 - bit) : bit ]
+    end
+
+  end
 end
 
 
