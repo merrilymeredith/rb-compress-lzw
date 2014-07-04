@@ -16,8 +16,6 @@ module LZW
 
     def decompress ( data )
       LZW::Decompressor.new.decompress( data )
-    rescue
-      nil
     end
   end
   
@@ -159,6 +157,18 @@ module LZW
       end
     end
 
+    def to_s
+      @field.unpack('b*').first
+    end
+
+    def set_varint ( pos, width = 8, val )
+      ( 0 .. width ).each do |bit_offset|
+        self[pos + (big_endian ? (width - bit_offset) : bit_offset)] =
+          (val >> bit_offset) & 1
+      end
+      self
+    end
+
     private
 
     def byte_divmod ( pos )
@@ -169,7 +179,7 @@ module LZW
         @field << "\000"
       end
 
-      [ byte, big_endian ? (7 - bit) : bit ]
+      [ byte, bit ]
     end
 
   end

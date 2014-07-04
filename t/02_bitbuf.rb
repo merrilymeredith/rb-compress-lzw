@@ -34,15 +34,37 @@ describe LZW::BitBuf do
   it "is enumerable (bitwise)" do
     LZW::BitBuf.new( field: "\xff" )
       .inject('') { |acc, bitval| acc << bitval.to_s }
-      .must_equal "11111111"
+      .must_equal '11111111'
   end
 
-  it "abstracts position from endianness" do
+  it "can be stringified to ascii 0 and 1" do
+    LZW::BitBuf.new( field: "\xff" )
+      .to_s
+      .must_equal '11111111'
+  end
+
+  it "stores variable-sized integers" do
+    LZW::BitBuf.new.set_varint( 0, 12, 2**12 - 1)
+      .to_s
+      .must_equal '1111111111110000'
+  end
+
+  it "always treats subscript as little-endian" do
     l = LZW::BitBuf.new( big_endian: false )
     l[4] = 1
 
     b = LZW::BitBuf.new( big_endian: true )
     b[4] = 1
+
+    l.field.must_equal b.field
+  end
+
+  it "handles endianness when writing integers" do
+    l = LZW::BitBuf.new( big_endian: false )
+    l.set_varint( 0, 8, 15 )
+
+    b = LZW::BitBuf.new( big_endian: true )
+    b.set_varint( 0, 8, 15 )
 
     l.field.wont_equal b.field
   end
