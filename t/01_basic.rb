@@ -19,4 +19,8 @@ describe LZW::Simple do
       LZW::Simple.new.compress( LOREM )
     ).must_be :==, LOREM
   end
+
+  it "returns nil for bad input" do
+    LZW::Simple.new.decompress( "foo" ).must_be_nil
+  end
 end

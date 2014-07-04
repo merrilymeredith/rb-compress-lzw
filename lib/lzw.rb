@@ -7,6 +7,8 @@ module LZW
 
     def decompress ( data )
       LZW::Decompressor.new.decompress( data )
+    rescue
+      nil
     end
   end
   
@@ -15,7 +17,7 @@ module LZW
 
     def initialize (
       block_mode:     true,
-      big_endian:      nil,
+      big_endian:     nil,
       init_code_size: 9,
       max_code_size:  16
     )
