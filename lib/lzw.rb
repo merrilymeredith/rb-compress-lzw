@@ -48,20 +48,52 @@ module LZW
         raise "init_code_size must be greater than 8"
       end
 
-      @buf     = magic
-      @buf_pos = @buf.size * 8
+      @buf     = LZW::BitBuf.new( field: magic )
+      @buf_pos = @buf.field.bytesize * 8
     end
 
     def compress( data )
       reset
 
-      @buf << data
+      seen = ''
+      data.each_byte do |byte|
+        char = byte.chr
+
+        if @code_table.has_key?( seen + char )
+          seen << char
+        else
+          @buf.set_varint( @buf_pos, @code_size, @code_table[seen] )
+          @buf_pos += @code_size
+
+          @code_table[seen + char] = @next_code
+          @next_code += 1
+
+          if @next_code >= ( 2 ** @code_size )
+            if @code_size < @max_code_size
+              @code_size += 1
+            # elsif @block_mode
+              # reset_code_table
+              # set_varint reset_code
+            end
+          end
+
+          seen = char
+        end
+      end
+
+      @buf.set_varint( @buf_pos, @code_size, @code_table[seen] )
+
+      @buf.field
     end
 
     private
 
     def reset
       @code_table = {}
+      ( 0 .. 255 ).each do |i|
+        @code_table[i.chr] = i
+      end
+
       @code_size  = @init_code_size
       @next_code  = 257
     end
