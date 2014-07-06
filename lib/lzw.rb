@@ -178,8 +178,10 @@ module LZW
     # Derived from Gene Hsu's work at
     # https://github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb
     # but it wasn't worth inheriting from an unaccepted pull to a gem that's
-    # unmaintained.
+    # unmaintained.  Mostly, masking out is way smarter than vec() which is
+    # what I'm doing in perl right now.
 
+    # Compared to bitarray:
     # I'm forcing this to default-0 for bits, making a fixed size
     # unnecessary, and supporting both endians.  And changing the
     # interface, so I shouldn't subclass anyway.
