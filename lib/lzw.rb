@@ -28,10 +28,6 @@ module LZW
       init_code_size: 9,
       max_code_size:  16
     )
-      @block_mode     = block_mode
-      @init_code_size = init_code_size
-      @max_code_size  = max_code_size
-      
       if big_endian.nil?
         @big_endian = LZW::big_endian
       end
@@ -48,8 +44,10 @@ module LZW
         raise "init_code_size must be greater than 8"
       end
 
-      @buf     = LZW::BitBuf.new( field: magic )
-      @buf_pos = @buf.field.bytesize * 8
+      @block_mode     = block_mode
+      @init_code_size = init_code_size
+      @max_code_size  = max_code_size
+
     end
 
     def compress( data )
@@ -86,9 +84,16 @@ module LZW
       @buf.field
     end
 
+    def reset
+      @buf     = LZW::BitBuf.new( field: magic )
+      @buf_pos = @buf.field.bytesize * 8
+
+      code_reset
+    end
+
     private
 
-    def reset
+    def code_reset
       @code_table = {}
       ( 0 .. 255 ).each do |i|
         @code_table[i.chr] = i
@@ -109,8 +114,60 @@ module LZW
 
 
   class Decompressor
+    attr_reader :big_endian, :init_code_size
+
+    def initialize (
+      big_endian: LZW::big_endian,
+      init_code_size: 9
+    )
+      @big_endian = big_endian
+      @init_code_size = init_code_size
+    end
+
     def decompress ( data )
-      
+      reset
+
+      read_magic( data[0,3] )
+      @data_pos = 3
+
+      puts self.inspect
+      @buf
+    end
+
+    def reset
+      @max_code_size = 16
+      @buf           = ''
+
+      code_reset
+    end
+
+    private
+
+    def code_reset
+      @code_table = []
+      ( 0 .. 255 ).each do |i|
+        @code_table[i] = i.chr
+      end
+
+      @code_size  = @init_code_size
+      @next_code  = 257
+    end
+
+    def read_magic ( magic )
+      if magic.bytesize != 3 or magic[0,2] != MAGIC
+        raise "Invalid compress(1) header"
+      end
+
+      bits = magic.getbyte(2)
+      @max_code_size = bits & MASK_BITS
+      @block_mode    = ( bits & MASK_BLOCK ) >> 7
+      @block_mode    = @block_mode == 1 ? true : false
+
+      if @init_code_size > @max_code_size
+        raise "Can't decompress stream with init_code_size #{@init_code_size}"
+          +"as it's greater than the stream's max_code_size #{@max_code_size}."
+      end
+
     end
   end
 
@@ -173,7 +230,7 @@ module LZW
         @field.setbyte( byte,
                        @field.getbyte(byte) | OR_BITMASK[bit] )
       else
-        throw "Only 0 and 1 are valid for a bit field"
+        raise "Only 0 and 1 are valid for a bit field"
       end
     end
 
