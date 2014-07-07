@@ -267,20 +267,34 @@ module LZW
 
     def set_varint ( pos, width = 8, val )
       ( 0 .. width ).each do |bit_offset|
-        self[pos + (big_endian ? (width - bit_offset) : bit_offset)] =
+        self[pos + (@big_endian ? (width - bit_offset) : bit_offset)] =
           (val >> bit_offset) & 1
       end
       self
     end
 
+    def get_varint ( pos, width = 8 )
+      byte, _ = pos.divmod(8)
+      if byte > @field.bytesize - 1
+        return nil
+      end
+
+      int = 0
+      ( 0 .. width ).each do |bit_offset|
+        int +=
+          self[pos + (@big_endian ? (width - bit_offset) : bit_offset)] *
+          ( 2 ** bit_offset )
+      end
+      int
+    end
     private
 
     def byte_divmod ( pos )
       byte, bit = pos.divmod(8)
 
-      if byte > @field.bytesize - 1
+      if byte > ( @field.bytesize - 1 )
         # puts "grow to byte #{byte}"
-        @field << "\000"
+        @field <<  "\000" * ( byte - @field.bytesize + 1 ) 
       end
 
       [ byte, bit ]
