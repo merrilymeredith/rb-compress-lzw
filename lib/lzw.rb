@@ -5,15 +5,31 @@ module LZW
   MASK_BLOCK = 0x80
   RESET_CODE = 256
 
-  def self.big_endian
+  # Detect if we're on a big-endian arch
+  def self.big_endian?
     [1].pack("I") == [1].pack("N")
   end
 
+
+  # Simplest-use LZW compressor and decompressor
   class Simple
+
+    # Compress input with defaults
+    #
+    # @param data [#each_byte] data to be compressed
+    #
+    # @return [String] LZW compressed data
     def compress ( data )
       LZW::Compressor.new.compress( data )
     end
 
+    # Decompress input with defaults
+    #
+    # @param data [String] compressed data to be decompressed
+    #
+    # @return [String] decompressed data
+    #
+    # @raise [RuntimeException] if there is an error in the compressed stream
     def decompress ( data )
       LZW::Decompressor.new.decompress( data )
     end
@@ -24,14 +40,10 @@ module LZW
 
     def initialize (
       block_mode:     true,
-      big_endian:     nil,
+      big_endian:     LZW::big_endian?,
       init_code_size: 9,
       max_code_size:  16
     )
-      if big_endian.nil?
-        @big_endian = LZW::big_endian
-      end
-
       if init_code_size > max_code_size 
         raise "init_code_size must be less than or equal to max_code_size"
       end
@@ -44,6 +56,7 @@ module LZW
         raise "init_code_size must be greater than 8"
       end
 
+      @big_endian     = big_endian
       @block_mode     = block_mode
       @init_code_size = init_code_size
       @max_code_size  = max_code_size
@@ -117,10 +130,10 @@ module LZW
     attr_reader :big_endian, :init_code_size
 
     def initialize (
-      big_endian: LZW::big_endian,
+      big_endian:     LZW::big_endian?,
       init_code_size: 9
     )
-      @big_endian = big_endian
+      @big_endian     = big_endian
       @init_code_size = init_code_size
     end
 
@@ -130,7 +143,7 @@ module LZW
       read_magic( data[0,3] )
       @data_pos = 3
 
-      puts self.inspect
+      # puts self.inspect
       @buf
     end
 
@@ -212,7 +225,7 @@ module LZW
 
     def initialize (
       field:      "\000",
-      big_endian: LZW::big_endian
+      big_endian: LZW::big_endian?
     )
 
       @field      = field.b
