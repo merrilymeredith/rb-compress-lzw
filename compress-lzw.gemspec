@@ -12,7 +12,8 @@ Gem::Specification.new do |s|
   s.license     = 'MIT'
   s.homepage    = 'https://github.com/merrilymeredith/rb-compress-lzw'
 
-  s.files       = ["lib/"]
+  s.has_rdoc    = 'yard'
+  s.files       = `git ls-files -z -- lib/* README.md LICENSE compress-lzw.gemspec`.split("\x0")
 
   s.required_ruby_version = '~> 2.0'
 

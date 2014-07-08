@@ -1,0 +1,9 @@
+--readme README.md
+--title "compress-lzw documentation"
+
+--default-return ''
+--hide-void-return
+
+lib/**/*.rb
+
+
