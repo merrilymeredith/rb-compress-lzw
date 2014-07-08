@@ -14,5 +14,9 @@ bits at a time and scaling up as the codes increase to 16 bits.
 **TODO**: compress(1) also uses a feature called block mode, where a code in the
 stream trigers a dictionary reset and beginning at 9 bits again.  This is not
 yet implemented, but the lack of it only hinders compatibility with this
-gem reading .Z files which use the feature.  Other combinations are fine.
+gem reading .Z files which use the feature.  Other combinations of input and 
+output sources are fine.  The lack of block mode theoretically only limits
+compression ratio after the maximum dictionary size is reached, if the stream
+data is no longer suited to the existing dictionary.
+
 
