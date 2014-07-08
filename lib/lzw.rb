@@ -7,6 +7,8 @@
 # [{LZW::BitBuf}]       An abstraction for modifying a String bitwise and 
 #                       with unsigned integers at arbitrary offsets and sizes.
 #
+# {include:file:README.md}
+#
 # @see https://github.com/merrilymeredith/rb-compress-lzw
 # @see https://en.wikipedia.org/wiki/Lempel–Ziv–Welch
 module LZW
