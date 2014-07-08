@@ -1,5 +1,5 @@
 
 watch( '(lib|t)/.*\.rb' ) do
-  system 'clear; rake test'
+  system 'tput reset; rake test'
 end
 

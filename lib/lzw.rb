@@ -1,3 +1,13 @@
+# Scaling LZW, like Unix compress(1)
+#
+# The LZW module offers:
+# [{LZW::Simple}]       Straightforward compress/decompress calls in one place
+# [{LZW::Compressor}]   LZW compressor with more fine-grained controls
+# [{LZW::Decompressor}] LZW decompressor in the same vein
+# [{LZW::BitBuf}]       An abstraction for modifying a String bitwise and 
+#                       with unsigned integers at arbitrary offsets and sizes.
+#
+# @see https://github.com/merrilymeredith/rb-compress-lzw
 module LZW
 
   MAGIC      = "\037\235".b
@@ -17,7 +27,6 @@ module LZW
     # Compress input with defaults
     #
     # @param data [#each_byte] data to be compressed
-    #
     # @return [String] LZW compressed data
     def compress ( data )
       LZW::Compressor.new.compress( data )
@@ -26,9 +35,7 @@ module LZW
     # Decompress input with defaults
     #
     # @param data [String] compressed data to be decompressed
-    #
     # @return [String] decompressed data
-    #
     # @raise [RuntimeException] if there is an error in the compressed stream
     def decompress ( data )
       LZW::Decompressor.new.decompress( data )
@@ -184,20 +191,24 @@ module LZW
     end
   end
 
-
+  # Wrap up a String, in binary encoding, for single-bit manipulation and
+  # working with variable-size integers.  This is necessary because our
+  # LZW streams don't align with byte boundaries beyond the 5th byte, they
+  # start writing codes 9 bits at a time (by default) and scale up from that
+  # later.
+  #
+  # Derived from Gene Hsu's work at
+  # https://github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb
+  # but it wasn't worth inheriting from an unaccepted pull to a gem that's
+  # unmaintained.  Mostly, masking out is way smarter than something like
+  # vec() which is what I'm doing in the Perl version of this right now.
+  #
+  # Compared to bitarray:
+  # I'm forcing this to default-0 for bits, making a fixed size
+  # unnecessary, and supporting both endians.  And changing the
+  # interface, so I shouldn't subclass anyway.
   class BitBuf
     include Enumerable
-
-    # Derived from Gene Hsu's work at
-    # https://github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb
-    # but it wasn't worth inheriting from an unaccepted pull to a gem that's
-    # unmaintained.  Mostly, masking out is way smarter than vec() which is
-    # what I'm doing in perl right now.
-
-    # Compared to bitarray:
-    # I'm forcing this to default-0 for bits, making a fixed size
-    # unnecessary, and supporting both endians.  And changing the
-    # interface, so I shouldn't subclass anyway.
 
     AND_BITMASK = %w[
       01111111
@@ -221,8 +232,19 @@ module LZW
       00000001
     ].map{|w| [w].pack("b8").getbyte(0) }.freeze
 
-    attr_reader :big_endian, :field
+    # If true, {#get_varint} and {#set_varint} work in big-endian order.
+    # @return [Boolean]
+    attr_reader :big_endian
 
+    # The string, set to binary encoding, wrapped by this BitBuf.  This
+    # is essentially the "pack"ed form of the bitfield.
+    # @return [String]
+    attr_reader :field
+
+    # @param field [String] Optional string to wrap with BitBuf. Will be
+    #   copied with binary encoding.
+    # @param big_endian [Boolean] Optionally force endianness used when
+    #   writing integers to the bitfield. Default detected at runtime.
     def initialize (
       field:      "\000",
       big_endian: LZW::big_endian?
@@ -232,6 +254,12 @@ module LZW
       @big_endian = big_endian
     end
 
+    # Set a specific bit at pos to val. Trying to set a bit beyond the
+    # currently defined {#bytesize} will automatically grow the BitBuf
+    # to the next whole byte needed to include that bit.
+    #
+    # @param pos [Numeric] 0-indexed bit position
+    # @param val [Numeric] 0 or 1.  2 isn't yet allowed for bits.
     def []= ( pos, val )
       byte, bit = byte_divmod(pos)
 
@@ -249,22 +277,45 @@ module LZW
       end
     end
 
+    # Read a bit at pos.  Trying to read a bit beyond the currently defined
+    # {#bytesize} will automatically grow the BitBuf to the next whole byte
+    # needed to include that bit.
+    #
+    # @param pos [Numeric] 0-indexed bit position
+    # @return [Fixnum] the bit value at the requested bit position.
     def [] ( pos )
       byte, bit = byte_divmod(pos)
 
       (@field.getbyte(byte) >> bit ) & 1
     end
 
+    # Iterate over the BitBuf bitwise.
     def each ( &block )
-      ( @field.bytesize * 8 ).times do |pos|
+      ( bytesize * 8 ).times do |pos|
         yield self[pos]
       end
     end
 
+    # Returns the BitBuf as a text string of zeroes and ones.
     def to_s
       @field.unpack('b*').first
     end
 
+    # Returns the current bytesize of the BitBuf
+    # @return [Numeric]
+    # @!parse attr_reader :bytesize
+    def bytesize
+      @field.bytesize
+    end
+
+    # Store an unsigned integer in {#big_endian} order of "bits" length
+    # at "pos" position. This method will grow the BitBuf as necessary,
+    # whole bytes.
+    #
+    # @param pos [Numeric] 0-indexed bit position to write the first bit
+    # @param width [Numeric] Default 8. The desired size of the supplied
+    #   integer. There is no overflow check.
+    # @param val [Numeric] The integer value to be stored in the BitBuf.
     def set_varint ( pos, width = 8, val )
       ( 0 .. width ).each do |bit_offset|
         self[pos + (@big_endian ? (width - bit_offset) : bit_offset)] =
@@ -273,9 +324,14 @@ module LZW
       self
     end
 
+    # Fetch an unsigned integer of "width" size from "pos" in the BitBuf.
+    # Unlike other methods, if "pos" is beyond the end of the BitBuf, {nil}
+    # is returned.
+    #
+    # @return [Numeric,nil]
     def get_varint ( pos, width = 8 )
       byte, _ = pos.divmod(8)
-      if byte > @field.bytesize - 1
+      if byte > bytesize - 1
         return nil
       end
 
@@ -287,12 +343,18 @@ module LZW
       end
       int
     end
+
     private
 
+    # Wraps divmod to always divide by 8 and automatically grow the BitBuf
+    # as soon as we start poking beyond the end.
+    #
+    # @param [Numeric] pos A 0-indexed bit position.
+    # @return [Array<Numeric] byte index, bit offset
     def byte_divmod ( pos )
       byte, bit = pos.divmod(8)
 
-      if byte > ( @field.bytesize - 1 )
+      if byte > ( bytesize - 1 )
         # puts "grow to byte #{byte}"
         @field <<  "\000" * ( byte - @field.bytesize + 1 ) 
       end
