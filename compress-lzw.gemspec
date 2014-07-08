@@ -1,6 +1,10 @@
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'lzw'
+
 Gem::Specification.new do |s|
   s.name        = 'compress-lzw'
-  s.version     = '0.0.1'
+  s.version     = LZW::VERSION
   s.summary     = "Scaling LZW compression"
   s.description = "Scaling LZW compression, compatible with unix compress(1)"
   s.authors     = [ "Meredith Howard"  ]
@@ -12,6 +16,6 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '~> 2.0'
 
-  s.add_development_dependency 'minitest'
+  s.add_development_dependency 'minitest', '~> 5'
 end
 

@@ -8,12 +8,16 @@
 #                       with unsigned integers at arbitrary offsets and sizes.
 #
 # @see https://github.com/merrilymeredith/rb-compress-lzw
+# @see https://en.wikipedia.org/wiki/Lempel–Ziv–Welch
 module LZW
+
+  VERSION    = '0.0.1'
 
   MAGIC      = "\037\235".b
   MASK_BITS  = 0x1f
   MASK_BLOCK = 0x80
   RESET_CODE = 256
+  private_constant :MAGIC, :MASK_BITS, :MASK_BLOCK, :RESET_CODE
 
   # Detect if we're on a big-endian arch
   def self.big_endian?
@@ -231,6 +235,7 @@ module LZW
       00000010
       00000001
     ].map{|w| [w].pack("b8").getbyte(0) }.freeze
+    private_constant :AND_BITMASK, :OR_BITMASK
 
     # If true, {#get_varint} and {#set_varint} work in big-endian order.
     # @return [Boolean]
