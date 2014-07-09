@@ -2,8 +2,7 @@ require "minitest/autorun"
 
 require "lzw"
  
-LOREM = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-
+require_relative 'testdata'
 
 describe LZW::Simple do
   it "can be created with no arguments" do
