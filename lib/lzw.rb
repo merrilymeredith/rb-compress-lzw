@@ -48,9 +48,43 @@ module LZW
     end
   end
   
+  # Scaling LZW data compressor with some configurables
   class Compressor
-    attr_reader :block_mode, :big_endian, :max_code_size, :init_code_size
 
+    # (NYI) If true, enables compression in block mode. Default true.
+    #
+    # After reaching {#max_code_size} bits per code, the compression dictionary
+    # and code size may be reset if a drop in compression ratio is observed.
+    # @return [Boolean]
+    attr_reader :block_mode
+
+    # If true, codes are written in big-endian order. Default
+    # detected by LZW::big_endian?.
+    # @return [Boolean]
+    attr_reader :big_endian
+
+    # The maximum code size, in bits, that compression may scale up to.
+    # Default 16.
+    #
+    # Valid values are init_code_size to 24.  Values greater than 16 break
+    # compatibility with compress(1).
+    # @return [Fixnum]
+    attr_reader :max_code_size
+
+    # The initial code size, in bits, used for compression. Default 9.
+    #
+    # Valid values are 9 to max_code_size.  Anything other than the default
+    # breaks compatibility with compress(1) and requires the same attribute
+    # to be set on the decompressor.
+    # @return [Fixnum]
+    attr_reader :init_code_size
+
+    # LZW::Compressors work fine with the default settings.
+    # 
+    # @param block_mode [Boolean] (see {#block_mode})
+    # @param big_endian [Boolean] (see {#big_endian})
+    # @param init_code_size [Fixnum] (see {#init_code_size})
+    # @param max_code_size [Fixnum] (see {#max_code_size})
     def initialize (
       block_mode:     true,
       big_endian:     LZW::big_endian?,
@@ -61,8 +95,8 @@ module LZW
         raise "init_code_size must be less than or equal to max_code_size"
       end
 
-      if max_code_size > 16
-        raise "max_code_size must be 16 or less"
+      if max_code_size > 24
+        raise "max_code_size must be 24 or less"
       end
 
       if init_code_size < 9
@@ -76,6 +110,11 @@ module LZW
 
     end
 
+    # Given a String(ish) of data, return the LZW-compressed result as another
+    # String.
+    #
+    # @param data [#each_byte<#chr>] Input data
+    # @return [String]
     def compress( data )
       reset
 
@@ -110,15 +149,28 @@ module LZW
       @buf.field
     end
 
+    # Reset compressor state.  This is run at the beginning of {#compress},
+    # so it's not necessary for repeated compression, but this allows wiping
+    # the last code table and buffer from the object instance.
     def reset
-      @buf     = LZW::BitBuf.new( field: magic )
-      @buf_pos = @buf.field.bytesize * 8
+      @buf     = LZW::BitBuf.new( big_endian: @big_endian )
+      @buf_pos = 0
+      
+      # Here we make sure even the first actual bytes are in @big_endian order
+      # so cross-arch compression should be possible.
+      magic().each_byte do |b|
+        @buf.set_varint( @buf_pos, 8, b.ord )
+        @buf_pos += 8 
+      end
 
       code_reset
     end
 
     private
 
+    # Re-initialize the code table, code size and next code.
+    # This happens at the beginning of compression and whenever
+    # RESET_CODE is added to the stream (block mode).
     def code_reset
       @code_table = {}
       ( 0 .. 255 ).each do |i|
@@ -129,6 +181,8 @@ module LZW
       @next_code  = 257
     end
 
+    # Prepare the header magic bytes for this stream.
+    # @return [String]
     def magic
       MAGIC + (
         ( @max_code_size & MASK_BITS ) |
@@ -153,10 +207,13 @@ module LZW
     def decompress ( data )
       reset
 
-      read_magic( data[0,3] )
-      @data_pos = 3
+      data = LZW::BitBuf.new( big_endian: @big_endian, field: data )
+      # require 'pry'
+      # binding.pry
+      read_magic( data )
+      @data_pos = 24
 
-      # puts self.inspect
+      puts self.inspect
       @buf
     end
 
@@ -179,15 +236,20 @@ module LZW
       @next_code  = 257
     end
 
-    def read_magic ( magic )
+    def read_magic ( data )
+
+      magic = ''
+      ( 0 .. 2 ).each do |byte|
+        magic << data.get_varint( byte * 8, 8 ).chr
+      end
+
       if magic.bytesize != 3 or magic[0,2] != MAGIC
         raise "Invalid compress(1) header"
       end
 
       bits = magic.getbyte(2)
       @max_code_size = bits & MASK_BITS
-      @block_mode    = ( bits & MASK_BLOCK ) >> 7
-      @block_mode    = @block_mode == 1 ? true : false
+      @block_mode    = ( ( bits & MASK_BLOCK ) >> 7 ) == 1
 
       if @init_code_size > @max_code_size
         raise "Can't decompress stream with init_code_size #{@init_code_size}"
@@ -270,7 +332,7 @@ module LZW
     def []= ( pos, val )
       byte, bit = byte_divmod(pos)
 
-      # puts "be:#{@big_endian} p:#{pos} B:#{byte} b:#{bit} = #{val}  (#{self[pos]})"
+      # puts "p:#{pos} B:#{byte} b:#{bit} = #{val}  (#{self[pos]})"
 
       case val
       when 0
@@ -337,13 +399,12 @@ module LZW
     #
     # @return [Numeric,nil]
     def get_varint ( pos, width = 8 )
-      byte, _ = pos.divmod(8)
-      if byte > bytesize - 1
+      if ( pos + width - 1 ) > bytesize * 8
         return nil
       end
 
       int = 0
-      ( 0 .. width ).each do |bit_offset|
+      ( 0 .. (width - 1) ).each do |bit_offset|
         int +=
           self[pos + (@big_endian ? (width - bit_offset) : bit_offset)] *
           ( 2 ** bit_offset )
@@ -357,12 +418,11 @@ module LZW
     # as soon as we start poking beyond the end.
     #
     # @param [Numeric] pos A 0-indexed bit position.
-    # @return [Array<Numeric] byte index, bit offset
+    # @return [Array<Numeric>] byte index, bit offset
     def byte_divmod ( pos )
       byte, bit = pos.divmod(8)
 
       if byte > ( bytesize - 1 )
-        # puts "grow to byte #{byte}"
         @field <<  "\000" * ( byte - @field.bytesize + 1 ) 
       end
 
