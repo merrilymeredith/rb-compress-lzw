@@ -213,12 +213,47 @@ module LZW
       reset
 
       data = LZW::BitBuf.new( big_endian: @big_endian, field: data )
-      # require 'pry'
-      # binding.pry
+
       read_magic( data )
       @data_pos = 24
 
-      puts self.inspect
+      seen = data.get_varint( @data_pos, 9 )
+      @data_pos += 9
+
+      @buf << @str_table[ seen ]
+
+      while code = data.get_varint( @data_pos, @code_size )
+        @data_pos += @code_size
+
+        if @str_table.fetch( code, nil )
+          word = @str_table[ code ]
+
+          @buf << word
+          
+          @str_table[ @next_code ] = @str_table[ seen ] + word[0,1]
+          @next_code += 1
+        else
+          word = @str_table[ seen ]
+
+          if code != @next_code
+            warn "(#{code} != #{@next_code}) output may be corrupt"
+          end
+          @next_code += 1
+
+          @str_table[ code ] = word + word[0,1]
+
+          @buf << @str_table[ code ]
+        end
+
+        seen = code
+
+        if @next_code == ( 2 ** @code_size )
+          @code_size += 1 if @code_size < @max_code_size
+        end
+      end
+
+      # puts self.inspect
+
       @buf
     end
 
@@ -232,9 +267,9 @@ module LZW
     private
 
     def code_reset
-      @code_table = []
+      @str_table = []
       ( 0 .. 255 ).each do |i|
-        @code_table[i] = i.chr
+        @str_table[i] = i.chr
       end
 
       @code_size  = @init_code_size
@@ -266,7 +301,7 @@ module LZW
 
   # Wrap up a String, in binary encoding, for single-bit manipulation and
   # working with variable-size integers.  This is necessary because our
-  # LZW streams don't align with byte boundaries beyond the 5th byte, they
+  # LZW streams don't align with byte boundaries beyond the 4th byte, they
   # start writing codes 9 bits at a time (by default) and scale up from that
   # later.
   #
@@ -414,6 +449,7 @@ module LZW
           self[pos + (@big_endian ? (width - bit_offset) : bit_offset)] *
           ( 2 ** bit_offset )
       end
+
       int
     end
 

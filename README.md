@@ -19,4 +19,5 @@ output sources are fine.  The lack of block mode theoretically only limits
 compression ratio after the maximum dictionary size is reached, if the stream
 data is no longer suited to the existing dictionary.
 
+To get right to work, check out the LZW::Simple class.
 
