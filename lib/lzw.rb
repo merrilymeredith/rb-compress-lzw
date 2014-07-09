@@ -13,6 +13,7 @@
 # @see https://en.wikipedia.org/wiki/Lempel–Ziv–Welch
 module LZW
 
+  # compress-lzw gem version
   VERSION    = '0.0.1'
 
   MAGIC      = "\037\235".b
@@ -58,8 +59,8 @@ module LZW
     # @return [Boolean]
     attr_reader :block_mode
 
-    # If true, codes are written in big-endian order. Default
-    # detected by LZW::big_endian?.
+    # If true, codes are handled in big-endian order. Default
+    # detected by {LZW.big_endian?}.
     #
     # Because codes in this format don't align to byte boundaries, the usual
     # tools for flipping bit order don't work.  You'll just find yourself with
@@ -198,9 +199,17 @@ module LZW
   end
 
 
+  # Scaling LZW decompressor
   class Decompressor
-    attr_reader :big_endian, :init_code_size
 
+    # (see LZW::Compressor#big_endian)
+    attr_reader :big_endian
+
+    # (see LZW::Compressor#init_code_size)
+    attr_reader :init_code_size
+
+    # @param big_endian [Boolean] (see {#big_endian})
+    # @param init_code_size [Fixnum] (see {#init_code_size})
     def initialize (
       big_endian:     LZW::big_endian?,
       init_code_size: 9
@@ -209,6 +218,11 @@ module LZW
       @init_code_size = init_code_size
     end
 
+    # Given a String(ish) of LZW-compressed data, return the decompressed
+    # data as a binary String.
+    #
+    # @param data [String] Compressed input data
+    # @return [String]
     def decompress ( data )
       reset
 
@@ -257,16 +271,21 @@ module LZW
       @buf
     end
 
+    # Reset the state of the decompressor. This is run at the beginning of
+    # {#decompress}, so it's not necessary for reuse of an instance, but
+    # this allows wiping the string code table and buffer from the object
+    # instance.
     def reset
       @max_code_size = 16
-      @buf           = ''
+      @buf           = ''.b
 
-      code_reset
+      str_reset
     end
 
     private
 
-    def code_reset
+    # Build up the initial string table, reset code size and next code.
+    def str_reset
       @str_table = []
       ( 0 .. 255 ).each do |i|
         @str_table[i] = i.chr
@@ -276,6 +295,8 @@ module LZW
       @next_code  = 257
     end
 
+    # Verify the two magic bytes at the beginning of the stream and read
+    # bit and block data from the third.
     def read_magic ( data )
 
       magic = ''
@@ -437,7 +458,7 @@ module LZW
     # Unlike other methods, if "pos" is beyond the end of the BitBuf, {nil}
     # is returned.
     #
-    # @return [Numeric,nil]
+    # @return [Numeric, nil]
     def get_varint ( pos, width = 8 )
       if ( pos + width ) > bytesize * 8
         return nil
