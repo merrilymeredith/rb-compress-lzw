@@ -60,6 +60,11 @@ module LZW
 
     # If true, codes are written in big-endian order. Default
     # detected by LZW::big_endian?.
+    #
+    # Because codes in this format don't align to byte boundaries, the usual
+    # tools for flipping bit order don't work.  You'll just find yourself with
+    # a corrupt stream.  Forcing this option should help you work with streams
+    # for/from other architectures.
     # @return [Boolean]
     attr_reader :big_endian
 
