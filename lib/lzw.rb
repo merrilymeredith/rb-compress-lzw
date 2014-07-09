@@ -439,7 +439,7 @@ module LZW
     #
     # @return [Numeric,nil]
     def get_varint ( pos, width = 8 )
-      if ( pos + width - 1 ) > bytesize * 8
+      if ( pos + width ) > bytesize * 8
         return nil
       end
 
