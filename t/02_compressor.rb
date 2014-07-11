@@ -13,7 +13,6 @@ describe LZW::Compressor do
     LZW::Compressor.new(
       big_endian:     true,
       block_mode:     0,
-      init_code_size: 12,
       max_code_size:  14,
     ).must_be_instance_of LZW::Compressor
   end
@@ -21,8 +20,13 @@ describe LZW::Compressor do
   it "rejects invalid arguments" do
     proc {
       LZW::Compressor.new(
-        init_code_size: 16,
-        max_code_size:  12,
+        max_code_size: 25,
+      )
+    }.must_raise RuntimeError
+
+    proc {
+      LZW::Compressor.new(
+        max_code_size: 8,
       )
     }.must_raise RuntimeError
   end
@@ -35,7 +39,7 @@ describe LZW::Compressor do
   it "has accessors" do
     c = LZW::Compressor.new
     %w(
-      big_endian block_mode init_code_size max_code_size
+      big_endian block_mode max_code_size
     ).each { |m| c.must_respond_to m }
   end
 
@@ -47,10 +51,9 @@ describe LZW::Compressor do
     LZW::Compressor.new.compress( BIG ).length.must_be :<, BIG.length
   end
 
-  it "compresses at a fixed code size" do
+  it "compresses at a limited code size" do
     LZW::Compressor.new(
-      init_code_size: 12,
-      max_code_size:  12
+      max_code_size: 9
     ).compress( LOREM ).must_be_instance_of String
   end
 end

@@ -36,7 +36,7 @@ describe LZW::Decompressor do
   it "decompresses big data" do
     LZW::Decompressor.new.decompress(
       LZW::Simple.new.compress( BIG )
-    ).length.must_be :<, BIG.length
+    ).length.must_equal BIG.length
   end
 
   it "decompresses at a limited code size" do

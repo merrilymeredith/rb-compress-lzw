@@ -14,13 +14,17 @@
 module LZW
 
   # compress-lzw gem version
-  VERSION    = '0.0.1'
+  VERSION        = '0.0.1'
 
-  MAGIC      = "\037\235".b
-  MASK_BITS  = 0x1f
-  MASK_BLOCK = 0x80
-  RESET_CODE = 256
+  MAGIC          = "\037\235".b
+  MASK_BITS      = 0x1f
+  MASK_BLOCK     = 0x80
+  RESET_CODE     = 256
+  INIT_CODE      = 257
+  INIT_CODE_SIZE = 9
+
   private_constant :MAGIC, :MASK_BITS, :MASK_BLOCK, :RESET_CODE
+  private_constant :INIT_CODE, :INIT_CODE_SIZE
 
   # Detect if we're on a big-endian arch
   def self.big_endian?
@@ -77,41 +81,22 @@ module LZW
     # @return [Fixnum]
     attr_reader :max_code_size
 
-    # The initial code size, in bits, used for compression. Default 9.
-    #
-    # Valid values are 9 to max_code_size.  Anything other than the default
-    # breaks compatibility with compress(1) and requires the same attribute
-    # to be set on the decompressor.
-    # @return [Fixnum]
-    attr_reader :init_code_size
-
     # LZW::Compressors work fine with the default settings.
     # 
     # @param block_mode [Boolean] (see {#block_mode})
     # @param big_endian [Boolean] (see {#big_endian})
-    # @param init_code_size [Fixnum] (see {#init_code_size})
     # @param max_code_size [Fixnum] (see {#max_code_size})
     def initialize (
       block_mode:     true,
       big_endian:     LZW::big_endian?,
-      init_code_size: 9,
       max_code_size:  16
     )
-      if init_code_size > max_code_size 
-        raise "init_code_size must be less than or equal to max_code_size"
-      end
-
-      if max_code_size > 24
-        raise "max_code_size must be 24 or less"
-      end
-
-      if init_code_size < 9
-        raise "init_code_size must be greater than 8"
+      if max_code_size > 24 or max_code_size < INIT_CODE_SIZE
+        raise "max_code_size must be between #{INIT_CODE_SIZE} and 24"
       end
 
       @big_endian     = big_endian
       @block_mode     = block_mode
-      @init_code_size = init_code_size
       @max_code_size  = max_code_size
 
     end
@@ -183,8 +168,8 @@ module LZW
         @code_table[i.chr] = i
       end
 
-      @code_size  = @init_code_size
-      @next_code  = 257
+      @code_size  = INIT_CODE_SIZE
+      @next_code  = INIT_CODE
     end
 
     # Prepare the header magic bytes for this stream.
@@ -205,17 +190,11 @@ module LZW
     # (see LZW::Compressor#big_endian)
     attr_reader :big_endian
 
-    # (see LZW::Compressor#init_code_size)
-    attr_reader :init_code_size
-
     # @param big_endian [Boolean] (see {#big_endian})
-    # @param init_code_size [Fixnum] (see {#init_code_size})
     def initialize (
-      big_endian:     LZW::big_endian?,
-      init_code_size: 9
+      big_endian:     LZW::big_endian?
     )
       @big_endian     = big_endian
-      @init_code_size = init_code_size
     end
 
     # Given a String(ish) of LZW-compressed data, return the decompressed
@@ -250,7 +229,7 @@ module LZW
           word = @str_table[ seen ]
 
           if code != @next_code
-            warn "(#{code} != #{@next_code}) output may be corrupt"
+            raise "(#{code} != #{@next_code}) output may be corrupt"
           end
           @next_code += 1
 
@@ -261,7 +240,7 @@ module LZW
 
         seen = code
 
-        if @next_code == ( 2 ** @code_size )
+        if @next_code == ( 2 ** @code_size ) - 1
           @code_size += 1 if @code_size < @max_code_size
         end
       end
@@ -291,8 +270,8 @@ module LZW
         @str_table[i] = i.chr
       end
 
-      @code_size  = @init_code_size
-      @next_code  = 257
+      @code_size  = INIT_CODE_SIZE
+      @next_code  = INIT_CODE
     end
 
     # Verify the two magic bytes at the beginning of the stream and read
@@ -311,11 +290,6 @@ module LZW
       bits = magic.getbyte(2)
       @max_code_size = bits & MASK_BITS
       @block_mode    = ( ( bits & MASK_BLOCK ) >> 7 ) == 1
-
-      if @init_code_size > @max_code_size
-        raise "Can't decompress stream with init_code_size #{@init_code_size}"
-          +"as it's greater than the stream's max_code_size #{@max_code_size}."
-      end
 
     end
   end
