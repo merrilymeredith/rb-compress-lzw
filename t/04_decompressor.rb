@@ -43,8 +43,8 @@ describe LZW::Decompressor do
     LZW::Decompressor.new(
     ).decompress(
       LZW::Compressor.new(
-        max_code_size:  9
-      ).compress( LOREM )
-    ).must_equal LOREM
+        max_code_size:  10
+      ).compress( BIG )
+    ).length.must_equal BIG.length
   end
 end

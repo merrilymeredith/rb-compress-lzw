@@ -76,7 +76,7 @@ module LZW
     # The maximum code size, in bits, that compression may scale up to.
     # Default 16.
     #
-    # Valid values are init_code_size to 24.  Values greater than 16 break
+    # Valid values are init_code_size(9) to 24.  Values greater than 16 break
     # compatibility with compress(1).
     # @return [Fixnum]
     attr_reader :max_code_size
@@ -113,25 +113,41 @@ module LZW
       data.each_byte do |byte|
         char = byte.chr
 
-        if @code_table.has_key?( seen + char )
+        if @code_table.has_key? seen + char
           seen << char
         else
-          @buf.set_varint( @buf_pos, @code_size, @code_table[seen] )
+
+          if @next_code == ( 2 ** @code_size ) + 1
+            if @code_size < @max_code_size
+              @code_size += 1
+              # warn "code up to #{@code_size} at #{@buf_pos} #{@buf.bytesize}"
+
+            elsif @block_mode
+
+              # if checkpoint.nil?
+              #   checkpoint = @buf_pos + CHECKPOINT_BITS
+              # elsif @buf_pos > checkpoint
+
+                warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
+                @buf.set_varint @buf_pos, @code_size, RESET_CODE
+                @buf_pos += @code_size
+
+                code_reset
+                # seen = ''
+
+              #   checkpoint = nil
+              # end
+            end
+          end
+
+          @buf.set_varint @buf_pos, @code_size, @code_table[seen]
           @buf_pos += @code_size
 
           @code_table[seen + char] = @next_code
           @next_code += 1
 
-          if @next_code >= ( 2 ** @code_size )
-            if @code_size < @max_code_size
-              @code_size += 1
-            # elsif @block_mode
-              # reset_code_table
-              # set_varint reset_code
-            end
-          end
-
           seen = char
+
         end
       end
 
@@ -218,6 +234,14 @@ module LZW
       while code = data.get_varint( @data_pos, @code_size )
         @data_pos += @code_size
 
+        if code == RESET_CODE
+          str_reset
+
+          seen = data.get_varint( @data_pos, @code_size )
+          @data_pos += @code_size
+          next
+        end
+
         if @str_table.fetch( code, nil )
           word = @str_table[ code ]
 
@@ -240,7 +264,7 @@ module LZW
 
         seen = code
 
-        if @next_code == ( 2 ** @code_size ) - 1
+        if @next_code == ( 2 ** @code_size ) 
           @code_size += 1 if @code_size < @max_code_size
         end
       end
