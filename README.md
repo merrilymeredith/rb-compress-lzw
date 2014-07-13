@@ -11,13 +11,11 @@ on progressively building a dictionary in the same way as the compressor. It
 also works outside the boundaries of bytes, writing its dictionary codes 9
 bits at a time and scaling up as the codes increase to 16 bits.
 
-**TODO**: compress(1) also uses a feature called block mode, where a code in the
-stream trigers a dictionary reset and beginning at 9 bits again.  This is not
-yet implemented, but the lack of it only hinders compatibility with this
-gem reading .Z files which use the feature.  Other combinations of input and 
-output sources are fine.  The lack of block mode theoretically only limits
-compression ratio after the maximum dictionary size is reached, if the stream
-data is no longer suited to the existing dictionary.
+**TODO**: non-block mode should have a first code of 256 rather than 257.
+Missing a byte at the end of big decompress test.  Code isn't the most
+efficient, but get impl right first.  everything should be lsb-first it
+seems? (remove feature but add an echo of header bits to bad header err
+so it's easy to see if someone encounters an msb0 one.)
 
 To get right to work, check out the LZW::Simple class.
 

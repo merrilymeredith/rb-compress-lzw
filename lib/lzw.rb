@@ -16,15 +16,16 @@ module LZW
   # compress-lzw gem version
   VERSION        = '0.0.1'
 
-  MAGIC          = "\037\235".b
-  MASK_BITS      = 0x1f
-  MASK_BLOCK     = 0x80
-  RESET_CODE     = 256
-  INIT_CODE      = 257
-  INIT_CODE_SIZE = 9
+  MAGIC           = "\037\235".b
+  MASK_BITS       = 0x1f
+  MASK_BLOCK      = 0x80
+  RESET_CODE      = 256
+  INIT_CODE       = 257
+  INIT_CODE_SIZE  = 9
+  CHECKPOINT_BITS = 10_000
 
   private_constant :MAGIC, :MASK_BITS, :MASK_BLOCK, :RESET_CODE
-  private_constant :INIT_CODE, :INIT_CODE_SIZE
+  private_constant :INIT_CODE, :INIT_CODE_SIZE, :CHECKPOINT_BITS
 
   # Detect if we're on a big-endian arch
   def self.big_endian?
@@ -109,9 +110,14 @@ module LZW
     def compress( data )
       reset
 
-      seen = ''
+      checkpoint = nil
+      last_ratio = nil
+      bytes_in   = 0
+      seen       = ''
+
       data.each_byte do |byte|
-        char = byte.chr
+        char      = byte.chr
+        bytes_in += 1
 
         if @code_table.has_key? seen + char
           seen << char
@@ -121,33 +127,49 @@ module LZW
             if @code_size < @max_code_size
               @code_size += 1
               # warn "code up to #{@code_size} at #{@buf_pos} #{@buf.bytesize}"
-
-            elsif @block_mode
-
-              # if checkpoint.nil?
-              #   checkpoint = @buf_pos + CHECKPOINT_BITS
-              # elsif @buf_pos > checkpoint
-
-                warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
-                @buf.set_varint @buf_pos, @code_size, RESET_CODE
-                @buf_pos += @code_size
-
-                code_reset
-                # seen = ''
-
-              #   checkpoint = nil
-              # end
+            else
+              @at_max_code_size = 1
             end
           end
 
           @buf.set_varint @buf_pos, @code_size, @code_table[seen]
           @buf_pos += @code_size
 
-          @code_table[seen + char] = @next_code
-          @next_code += 1
+          if @at_max_code_size == 0
+
+            @code_table[seen + char] = @next_code
+            @next_code += 1
+
+          elsif @block_mode
+            if checkpoint.nil?
+
+              checkpoint = @buf_pos + CHECKPOINT_BITS
+
+            elsif @buf_pos > checkpoint
+
+              ratio      = bytes_in / ( @buf_pos / 8 )
+              last_ratio = ratio if last_ratio.nil?
+
+              if ratio >= last_ratio
+
+                last_ratio = ratio
+                checkpoint = @buf_pos + CHECKPOINT_BITS
+
+              elsif ratio < last_ratio
+
+                warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
+                @buf.set_varint @buf_pos, @code_size, RESET_CODE
+                @buf_pos += @code_size
+
+                code_reset
+
+                ( checkpoint, last_ratio ) = [ nil, nil ]
+
+              end
+            end
+          end
 
           seen = char
-
         end
       end
 
@@ -184,8 +206,9 @@ module LZW
         @code_table[i.chr] = i
       end
 
-      @code_size  = INIT_CODE_SIZE
-      @next_code  = INIT_CODE
+      @at_max_code_size = 0
+      @code_size        = INIT_CODE_SIZE
+      @next_code        = INIT_CODE
     end
 
     # Prepare the header magic bytes for this stream.
@@ -445,6 +468,8 @@ module LZW
     #   integer. There is no overflow check.
     # @param val [Numeric] The integer value to be stored in the BitBuf.
     def set_varint ( pos, width = 8, val )
+      raise "integer overflow for #{width} bits: #{val}" if val > (2 ** width)
+
       ( 0 .. width ).each do |bit_offset|
         self[pos + (@big_endian ? (width - bit_offset) : bit_offset)] =
           (val >> bit_offset) & 1
@@ -459,6 +484,7 @@ module LZW
     # @return [Numeric, nil]
     def get_varint ( pos, width = 8 )
       if ( pos + width ) > bytesize * 8
+        warn "bailing at #{pos} + #{width} = #{ pos + width } of #{ bytesize * 8 }"
         return nil
       end
 
