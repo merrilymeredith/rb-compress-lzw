@@ -128,7 +128,7 @@ module LZW
           if @next_code == ( 2 ** @code_size ) + 1
             if @code_size < @max_code_size
               @code_size += 1
-              # warn "code up to #{@code_size} at #{@buf_pos} #{@buf.bytesize}"
+              warn "encode up to #{@code_size} for next_code #{@next_code} at #{@buf_pos}"
             else
               @at_max_code_size = 1
             end
@@ -142,7 +142,9 @@ module LZW
             @code_table[seen + char] = @next_code
             @next_code += 1
 
-          elsif @block_mode
+          end
+
+          if @at_max_code_size == 1 and @block_mode
             if checkpoint.nil?
 
               checkpoint = @buf_pos + CHECKPOINT_BITS
@@ -278,14 +280,12 @@ module LZW
           @buf << word
           
           @str_table[ @next_code ] = @str_table[ seen ] + word[0,1]
-          @next_code += 1
         else
           word = @str_table[ seen ]
 
           if code != @next_code
             raise "(#{code} != #{@next_code}) input may be corrupt at bit #{@data_pos - @code_size}"
           end
-          @next_code += 1
 
           @str_table[ code ] = word + word[0,1]
 
@@ -294,9 +294,11 @@ module LZW
 
         seen = code
 
-        if @next_code == ( 2 ** @code_size ) 
-          @code_size += 1 if @code_size < @max_code_size
-          # warn "decode up to size #{@code_size} max #{@max_code_size} at #{@data_pos}"
+        @next_code += 1
+
+        if @next_code == ( 2 ** @code_size ) and @code_size < @max_code_size
+          @code_size += 1
+          warn "decode up to #{@code_size} for next #{@next_code} max #{@max_code_size} at #{@data_pos}"
         end
       end
 
