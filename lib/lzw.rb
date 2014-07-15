@@ -295,7 +295,7 @@ module LZW
 
         if @next_code == ( 2 ** @code_size ) 
           @code_size += 1 if @code_size < @max_code_size
-          warn "d up to size #{@code_size} max #{@max_code_size}"
+          # warn "decode up to size #{@code_size} max #{@max_code_size} at #{@data_pos}"
         end
       end
 
@@ -491,7 +491,7 @@ module LZW
     # @return [Numeric, nil]
     def get_varint ( pos, width = 8 )
       if ( pos + width ) > bytesize * 8
-        warn "bailing at #{pos} + #{width} = #{ pos + width } of #{ bytesize * 8 }"
+        # warn "bailing at #{pos} + #{width} = #{ pos + width } of #{ bytesize * 8 }"
         return nil
       end
 
