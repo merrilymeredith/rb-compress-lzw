@@ -16,16 +16,18 @@ module LZW
   # compress-lzw gem version
   VERSION        = '0.0.1'
 
-  MAGIC           = "\037\235".b
-  MASK_BITS       = 0x1f
-  MASK_BLOCK      = 0x80
-  RESET_CODE      = 256
-  INIT_CODE       = 257
-  INIT_CODE_SIZE  = 9
-  CHECKPOINT_BITS = 10_000
+  MAGIC           = "\037\235".b      # static magic bytes
+  MASK_BITS       = 0x1f              # mask for 3rd byte for max_code_size
+  MASK_BLOCK      = 0x80              # mask for 3rd byte for block_mode
+  RESET_CODE      = 256               # block mode code to reset code table
+  BL_INIT_CODE    = 257               # block mode first available code
+  NR_INIT_CODE    = 256               # normal mode first available code
+  INIT_CODE_SIZE  = 9                 # initial code size beyond the header
+  CHECKPOINT_BITS = 10_000            # block mode check for falling compression
 
-  private_constant :MAGIC, :MASK_BITS, :MASK_BLOCK, :RESET_CODE
-  private_constant :INIT_CODE, :INIT_CODE_SIZE, :CHECKPOINT_BITS
+  private_constant :MAGIC, :MASK_BITS, :MASK_BLOCK
+  private_constant :RESET_CODE, :BL_INIT_CODE, :NR_INIT_CODE
+  private_constant :INIT_CODE_SIZE, :CHECKPOINT_BITS
 
   # Detect if we're on a big-endian arch
   def self.big_endian?
@@ -208,7 +210,7 @@ module LZW
 
       @at_max_code_size = 0
       @code_size        = INIT_CODE_SIZE
-      @next_code        = INIT_CODE
+      @next_code        = @block_mode ? BL_INIT_CODE : NR_INIT_CODE
     end
 
     # Prepare the header magic bytes for this stream.
@@ -248,6 +250,10 @@ module LZW
 
       read_magic( data )
       @data_pos = 24
+
+      # we've read @block_mode from the header now, so make sure our
+      # init_code is set properly
+      str_reset
 
       seen = data.get_varint( @data_pos, 9 )
       @data_pos += 9
@@ -289,6 +295,7 @@ module LZW
 
         if @next_code == ( 2 ** @code_size ) 
           @code_size += 1 if @code_size < @max_code_size
+          warn "d up to size #{@code_size} max #{@max_code_size}"
         end
       end
 
@@ -318,7 +325,7 @@ module LZW
       end
 
       @code_size  = INIT_CODE_SIZE
-      @next_code  = INIT_CODE
+      @next_code  = @block_mode ? BL_INIT_CODE : NR_INIT_CODE
     end
 
     # Verify the two magic bytes at the beginning of the stream and read
