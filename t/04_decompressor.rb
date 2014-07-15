@@ -33,10 +33,16 @@ describe LZW::Decompressor do
     ).must_equal LOREM
   end
 
-  it "decompresses big data" do
+  it "decompresses big data with block_mode" do
     LZW::Decompressor.new.decompress(
-      LZW::Simple.new.compress( BIG )
-    ).length.must_equal BIG.length
+      LZW::Compressor.new( block_mode: true ).compress( BIG )
+    ).bytesize.must_equal BIG.bytesize
+  end
+
+  it "decompresses big data without block_mode" do
+    LZW::Decompressor.new.decompress(
+      LZW::Compressor.new( block_mode: false ).compress( BIG )
+    ).bytesize.must_equal BIG.bytesize
   end
 
   it "decompresses at a limited code size" do
@@ -45,6 +51,6 @@ describe LZW::Decompressor do
       LZW::Compressor.new(
         max_code_size:  10
       ).compress( BIG )
-    ).length.must_equal BIG.length
+    ).bytesize.must_equal BIG.bytesize
   end
 end

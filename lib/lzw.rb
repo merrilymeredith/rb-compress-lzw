@@ -239,7 +239,7 @@ module LZW
     end
 
     # Given a String(ish) of LZW-compressed data, return the decompressed
-    # data as a binary String.
+    # data as a String left in "ASCII-8BIT" encoding.
     #
     # @param data [String] Compressed input data
     # @return [String]
@@ -263,11 +263,12 @@ module LZW
       while code = data.get_varint( @data_pos, @code_size )
         @data_pos += @code_size
 
-        if code == RESET_CODE
+        if @block_mode and code == RESET_CODE
           str_reset
 
           seen = data.get_varint( @data_pos, @code_size )
           @data_pos += @code_size
+          warn "reset at #{@data_pos} initial code #{@str_table[seen]}"
           next
         end
 
@@ -282,7 +283,7 @@ module LZW
           word = @str_table[ seen ]
 
           if code != @next_code
-            raise "(#{code} != #{@next_code}) output may be corrupt"
+            raise "(#{code} != #{@next_code}) input may be corrupt at bit #{@data_pos - @code_size}"
           end
           @next_code += 1
 

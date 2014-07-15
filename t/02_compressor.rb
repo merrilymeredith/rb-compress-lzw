@@ -44,11 +44,11 @@ describe LZW::Compressor do
   end
 
   it "compresses simple data" do
-    LZW::Compressor.new.compress( LOREM ).length.must_be :<, LOREM.length
+    LZW::Compressor.new.compress( LOREM ).bytesize.must_be :<, LOREM.bytesize
   end
 
   it "compresses big data" do
-    LZW::Compressor.new.compress( BIG ).length.must_be :<, BIG.length
+    LZW::Compressor.new.compress( BIG ).bytesize.must_be :<, BIG.bytesize
   end
 
   it "compresses at a limited code size" do
