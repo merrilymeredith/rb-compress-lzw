@@ -128,7 +128,7 @@ module LZW
           if @next_code == ( 2 ** @code_size ) + 1
             if @code_size < @max_code_size
               @code_size += 1
-              warn "encode up to #{@code_size} for next_code #{@next_code} at #{@buf_pos}"
+              # warn "encode up to #{@code_size} for next_code #{@next_code} at #{@buf_pos}"
             else
               @at_max_code_size = 1
             end
@@ -161,7 +161,7 @@ module LZW
 
               elsif ratio < last_ratio
 
-                warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
+                # warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
                 @buf.set_varint @buf_pos, @code_size, RESET_CODE
                 @buf_pos += @code_size
 
@@ -270,7 +270,7 @@ module LZW
 
           seen = data.get_varint( @data_pos, @code_size )
           @data_pos += @code_size
-          warn "reset at #{@data_pos} initial code #{@str_table[seen]}"
+          # warn "reset at #{@data_pos} initial code #{@str_table[seen]}"
           next
         end
 
@@ -298,7 +298,7 @@ module LZW
 
         if @next_code == ( 2 ** @code_size ) and @code_size < @max_code_size
           @code_size += 1
-          warn "decode up to #{@code_size} for next #{@next_code} max #{@max_code_size} at #{@data_pos}"
+          # warn "decode up to #{@code_size} for next #{@next_code} max #{@max_code_size} at #{@data_pos}"
         end
       end
 
