@@ -112,10 +112,11 @@ module LZW
     def compress( data )
       reset
 
-      checkpoint = nil
-      last_ratio = nil
-      bytes_in   = 0
-      seen       = ''
+      checkpoint    = nil
+      last_ratio    = nil
+      bytes_in      = 0
+      seen          = ''
+      next_increase = 2 ** @code_size
 
       data.each_byte do |byte|
         char      = byte.chr
@@ -125,10 +126,11 @@ module LZW
           seen << char
         else
 
-          if @next_code == ( 2 ** @code_size ) + 1
+          if @next_code >= next_increase + 1
             if @code_size < @max_code_size
-              @code_size += 1
-              # warn "encode up to #{@code_size} for next_code #{@next_code} at #{@buf_pos}"
+              @code_size    += 1
+              next_increase *= 2
+              warn "encode up to #{@code_size} for next_code #{@next_code} at #{@buf_pos}"
             else
               @at_max_code_size = 1
             end
@@ -140,8 +142,15 @@ module LZW
           if @at_max_code_size == 0
 
             @code_table[seen + char] = @next_code
+            if seen + char == 'ire'
+              warn "stored 'ire' as code #{@next_code} (max #{next_increase}"
+            end
             @next_code += 1
-
+          else
+            if @warned.nil?
+              warn "capped for code size #{@next_code}, #{@code_size} / #{@max_code_size}, pos #{@buf_pos}"
+              @warned = 1
+            end
           end
 
           if @at_max_code_size == 1 and @block_mode
@@ -251,55 +260,69 @@ module LZW
       data = LZW::BitBuf.new( big_endian: @big_endian, field: data )
 
       read_magic( data )
-      @data_pos = 24
+      data_pos = 24
 
       # we've read @block_mode from the header now, so make sure our
       # init_code is set properly
       str_reset
 
-      seen = data.get_varint( @data_pos, 9 )
-      @data_pos += 9
+      next_increase  = 2 ** @code_size
+
+      seen           = data.get_varint( data_pos, @code_size )
+      data_pos      += @code_size
 
       @buf << @str_table[ seen ]
 
-      while code = data.get_varint( @data_pos, @code_size )
-        @data_pos += @code_size
+      while code = data.get_varint( data_pos, @code_size )
+        data_pos += @code_size
 
         if @block_mode and code == RESET_CODE
           str_reset
 
-          seen = data.get_varint( @data_pos, @code_size )
-          @data_pos += @code_size
-          # warn "reset at #{@data_pos} initial code #{@str_table[seen]}"
+          seen = data.get_varint( data_pos, @code_size )
+          data_pos += @code_size
+          # warn "reset at #{data_pos} initial code #{@str_table[seen]}"
           next
         end
 
-        if @str_table.fetch( code, nil )
-          word = @str_table[ code ]
+        if word = @str_table.fetch( code, nil )
+          # word = @str_table[ code ]
 
           @buf << word
           
           @str_table[ @next_code ] = @str_table[ seen ] + word[0,1]
-        else
+
+        elsif code == @next_code
           word = @str_table[ seen ]
-
-          if code != @next_code
-            raise "(#{code} != #{@next_code}) input may be corrupt at bit #{@data_pos - @code_size}"
-          end
-
           @str_table[ code ] = word + word[0,1]
 
           @buf << @str_table[ code ]
+
+        else
+          raise "(#{code} != #{@next_code}) input may be corrupt at bit #{data_pos - @code_size}"
+
         end
 
         seen = code
-
+        if code == 1024
+          warn "saw code 1024: #{@str_table[code]}"
+        end
         @next_code += 1
 
-        if @next_code == ( 2 ** @code_size ) and @code_size < @max_code_size
-          @code_size += 1
-          # warn "decode up to #{@code_size} for next #{@next_code} max #{@max_code_size} at #{@data_pos}"
+        if @next_code >= next_increase
+          if @code_size < @max_code_size
+            @code_size    += 1
+            next_increase *= 2
+            warn "decode up to #{@code_size} for next #{@next_code} max #{@max_code_size} at #{data_pos}"
+
+          else
+            if @warned.nil?
+              warn "capped for decode size at #{@next_code}, #{@code_size} / #{@max_code_size} pos #{data_pos}"
+              @warned = 1
+            end
+          end
         end
+
       end
 
       # puts self.inspect
