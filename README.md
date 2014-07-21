@@ -13,12 +13,13 @@ bits at a time and scaling up as the codes increase to 16 bits.
 
 **TODO**:
 
-* limited code size test is failing, does not seem to be a string encoding
-issue
-* Code isn't the most efficient, but get impl right first.
+* Code isn't the most efficient, but get impl right first. Buffering with a
+queue of 8 codes makes the packed code always fit an octet boundary.
 * everything should be lsb-first it seems? (remove feature but add an echo
 of header bytes to bad header error message so it's easy to see if someone
 encounters an msb0 one.)
+* Add a set of tests that tries to find compress binaries installed to use
+for compatibility tests.
 
 To get right to work, check out the LZW::Simple class.
 
