@@ -29,11 +29,6 @@ module LZW
   private_constant :RESET_CODE, :BL_INIT_CODE, :NR_INIT_CODE
   private_constant :INIT_CODE_SIZE, :CHECKPOINT_BITS
 
-  # Detect if we're on a big-endian arch
-  def self.big_endian?
-    [1].pack("I") == [1].pack("N")
-  end
-
 
   # Simplest-use LZW compressor and decompressor
   class Simple
@@ -66,16 +61,6 @@ module LZW
     # @return [Boolean]
     attr_reader :block_mode
 
-    # If true, codes are handled in big-endian order. Default
-    # detected by {LZW.big_endian?}.
-    #
-    # Because codes in this format don't align to byte boundaries, the usual
-    # tools for flipping bit order don't work.  You'll just find yourself with
-    # a corrupt stream.  Forcing this option should help you work with streams
-    # for/from other architectures.
-    # @return [Boolean]
-    attr_reader :big_endian
-
     # The maximum code size, in bits, that compression may scale up to.
     # Default 16.
     #
@@ -87,18 +72,15 @@ module LZW
     # LZW::Compressors work fine with the default settings.
     # 
     # @param block_mode [Boolean] (see {#block_mode})
-    # @param big_endian [Boolean] (see {#big_endian})
     # @param max_code_size [Fixnum] (see {#max_code_size})
     def initialize (
       block_mode:     true,
-      big_endian:     LZW::big_endian?,
       max_code_size:  16
     )
       if max_code_size > 24 or max_code_size < INIT_CODE_SIZE
         raise "max_code_size must be between #{INIT_CODE_SIZE} and 24"
       end
 
-      @big_endian     = big_endian
       @block_mode     = block_mode
       @max_code_size  = max_code_size
 
@@ -173,11 +155,10 @@ module LZW
     # so it's not necessary for repeated compression, but this allows wiping
     # the last code table and buffer from the object instance.
     def reset
-      @buf     = LZW::BitBuf.new( big_endian: @big_endian )
+      @buf     = LZW::BitBuf.new
       @buf_pos = 0
       
-      # Here we make sure even the first actual bytes are in @big_endian order
-      # so cross-arch compression should be possible.
+      # begin with the magic bytes
       magic().each_byte do |b|
         @buf.set_varint( @buf_pos, 8, b.ord )
         @buf_pos += 8 
@@ -239,16 +220,6 @@ module LZW
   # Scaling LZW decompressor
   class Decompressor
 
-    # (see LZW::Compressor#big_endian)
-    attr_reader :big_endian
-
-    # @param big_endian [Boolean] (see {#big_endian})
-    def initialize (
-      big_endian:     LZW::big_endian?
-    )
-      @big_endian     = big_endian
-    end
-
     # Given a String(ish) of LZW-compressed data, return the decompressed
     # data as a String left in "ASCII-8BIT" encoding.
     #
@@ -257,7 +228,7 @@ module LZW
     def decompress ( data )
       reset
 
-      data = LZW::BitBuf.new( big_endian: @big_endian, field: data )
+      data = LZW::BitBuf.new( field: data )
 
       read_magic( data )
       data_pos = 24
@@ -377,7 +348,7 @@ module LZW
   #
   # Compared to bitarray:
   # I'm forcing this to default-0 for bits, making a fixed size
-  # unnecessary, and supporting both endians.  And changing the
+  # unnecessary, and supporting both bit orders. And changing the
   # interface, so I shouldn't subclass anyway.
   class BitBuf
     include Enumerable
@@ -405,9 +376,9 @@ module LZW
     ].map{|w| [w].pack("b8").getbyte(0) }.freeze
     private_constant :AND_BITMASK, :OR_BITMASK
 
-    # If true, {#get_varint} and {#set_varint} work in big-endian order.
+    # If true, {#get_varint} and {#set_varint} work in MSB-first order.
     # @return [Boolean]
-    attr_reader :big_endian
+    attr_reader :msb_first
 
     # The string, set to binary encoding, wrapped by this BitBuf.  This
     # is essentially the "pack"ed form of the bitfield.
@@ -416,15 +387,15 @@ module LZW
 
     # @param field [String] Optional string to wrap with BitBuf. Will be
     #   copied with binary encoding.
-    # @param big_endian [Boolean] Optionally force endianness used when
-    #   writing integers to the bitfield. Default detected at runtime.
+    # @param msb_first [Boolean] Optionally force bit order used when
+    #   writing integers to the bitfield. Default false.
     def initialize (
       field:      "\000",
-      big_endian: LZW::big_endian?
+      msb_first:  false
     )
 
       @field      = field.b
-      @big_endian = big_endian
+      @msb_first  = msb_first
     end
 
     # Set a specific bit at pos to val. Trying to set a bit beyond the
@@ -481,9 +452,9 @@ module LZW
       @field.bytesize
     end
 
-    # Store an unsigned integer in {#big_endian} order of "bits" length
-    # at "pos" position. This method will grow the BitBuf as necessary,
-    # whole bytes.
+    # Store an unsigned integer in of "bits" length, at "pos" position, and
+    # in LSB-first order unless {#msb_first} is true. This method will grow
+    # the BitBuf as necessary, in whole bytes.
     #
     # @param pos [Numeric] 0-indexed bit position to write the first bit
     # @param width [Numeric] Default 8. The desired size of the supplied
@@ -493,7 +464,7 @@ module LZW
       raise "integer overflow for #{width} bits: #{val}" if val > (2 ** width)
 
       ( 0 .. width ).each do |bit_offset|
-        self[pos + (@big_endian ? (width - bit_offset) : bit_offset)] =
+        self[pos + (@msb_first ? (width - bit_offset) : bit_offset)] =
           (val >> bit_offset) & 1
       end
       self
@@ -513,7 +484,7 @@ module LZW
       int = 0
       ( 0 .. (width - 1) ).each do |bit_offset|
         int +=
-          self[pos + (@big_endian ? (width - bit_offset) : bit_offset)] *
+          self[pos + (@msb_first ? (width - bit_offset) : bit_offset)] *
           ( 2 ** bit_offset )
       end
 

@@ -9,22 +9,9 @@ describe LZW::Decompressor do
     LZW::Decompressor.new.must_be_instance_of LZW::Decompressor
   end
 
-  it "can be created with all arguments" do
-    LZW::Decompressor.new(
-      big_endian:     true,
-    ).must_be_instance_of LZW::Decompressor
-  end
-
   it "responds to decompress and reset" do
     d = LZW::Decompressor.new
     %w( decompress reset ).each { |m| d.must_respond_to m }
-  end
-
-  it "has accessors" do
-    d = LZW::Decompressor.new
-    %w(
-      big_endian
-    ).each { |m| d.must_respond_to m }
   end
 
   it "decompresses simple data" do

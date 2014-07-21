@@ -11,8 +11,8 @@ describe LZW::BitBuf do
     LZW::BitBuf.new( field: "\xff" ).must_be_instance_of LZW::BitBuf
   end
 
-  it "can be created with a forced endianness" do
-    LZW::BitBuf.new( big_endian: true ).must_be_instance_of LZW::BitBuf
+  it "can be created with a forced MSB0 bit order" do
+    LZW::BitBuf.new( msb_first: true ).must_be_instance_of LZW::BitBuf
   end
 
   it "exposes the string buffer as 'field'" do
@@ -68,21 +68,21 @@ describe LZW::BitBuf do
     LZW::BitBuf.new.get_varint(32).must_be_nil
   end
 
-  it "always treats subscript as little-endian" do
-    l = LZW::BitBuf.new( big_endian: false )
+  it "always treats subscript as LSB0" do
+    l = LZW::BitBuf.new( msb_first: false )
     l[4] = 1
 
-    b = LZW::BitBuf.new( big_endian: true )
+    b = LZW::BitBuf.new( msb_first: true )
     b[4] = 1
 
     l.field.must_equal b.field
   end
 
-  it "handles endianness when writing integers" do
-    l = LZW::BitBuf.new( big_endian: false )
+  it "handles bit order when writing integers" do
+    l = LZW::BitBuf.new( msb_first: false )
     l.set_varint( 0, 8, 15 )
 
-    b = LZW::BitBuf.new( big_endian: true )
+    b = LZW::BitBuf.new( msb_first: true )
     b.set_varint( 0, 8, 15 )
 
     l.field.wont_equal b.field

@@ -11,7 +11,6 @@ describe LZW::Compressor do
 
   it "can be created with all arguments" do
     LZW::Compressor.new(
-      big_endian:     true,
       block_mode:     0,
       max_code_size:  14,
     ).must_be_instance_of LZW::Compressor
@@ -39,7 +38,7 @@ describe LZW::Compressor do
   it "has accessors" do
     c = LZW::Compressor.new
     %w(
-      big_endian block_mode max_code_size
+      block_mode max_code_size
     ).each { |m| c.must_respond_to m }
   end
 
