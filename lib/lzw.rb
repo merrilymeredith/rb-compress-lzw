@@ -324,7 +324,8 @@ module LZW
       end
 
       if magic.bytesize != 3 or magic[0,2] != MAGIC
-        raise "Invalid compress(1) header"
+        raise "Invalid compress(1) header " +
+          "(expected #{MAGIC.unpack('h*')}, got #{magic[0,2].unpack('h*')})"
       end
 
       bits = magic.getbyte(2)
