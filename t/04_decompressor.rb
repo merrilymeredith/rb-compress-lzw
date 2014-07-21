@@ -45,12 +45,12 @@ describe LZW::Decompressor do
     ).bytesize.must_equal BIG.bytesize
   end
 
-  it "decompresses at a limited code size" do
+  it "decompresses exactly at a limited code size, bytewise" do
     LZW::Decompressor.new(
     ).decompress(
       LZW::Compressor.new(
         max_code_size:  10
       ).compress( BIG )
-    ).bytesize.must_equal BIG.bytesize
+    ).must_equal BIG.b
   end
 end

@@ -29,4 +29,10 @@ describe LZW::Simple do
       LZW::Simple.new.decompress( "foo" )
     }.must_raise RuntimeError
   end
+
+  it "decompressed big data exactly, bytewise" do
+    LZW::Simple.new.decompress(
+      LZW::Simple.new.compress( BIG )
+    ).must_equal BIG.b
+  end
 end
