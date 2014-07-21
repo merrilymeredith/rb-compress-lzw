@@ -108,8 +108,7 @@ module LZW
           seen << char
         else
 
-          @buf.set_varint @buf_pos, @code_size, @code_table[seen]
-          @buf_pos += @code_size
+          write_code @code_table[seen]
 
           new_code seen + char
 
@@ -131,8 +130,7 @@ module LZW
               elsif ratio < last_ratio
 
                 # warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
-                @buf.set_varint @buf_pos, @code_size, RESET_CODE
-                @buf_pos += @code_size
+                write_code RESET_CODE
 
                 code_reset
 
@@ -146,7 +144,7 @@ module LZW
         end
       end
 
-      @buf.set_varint( @buf_pos, @code_size, @code_table[seen] )
+      write_code @code_table[seen]
 
       @buf.field
     end
@@ -212,8 +210,10 @@ module LZW
     end
 
     def write_code ( code )
-
+      @buf.set_varint @buf_pos, @code_size, code
+      @buf_pos += @code_size
     end
+
   end
 
 
@@ -228,30 +228,27 @@ module LZW
     def decompress ( data )
       reset
 
-      data = LZW::BitBuf.new( field: data )
+      @data     = LZW::BitBuf.new( field: data )
+      @data_pos = 0
 
-      read_magic( data )
-      data_pos = 24
+      read_magic @data
+      @data_pos = 24
 
       # we've read @block_mode from the header now, so make sure our
       # init_code is set properly
       str_reset
 
-      next_increase  = 2 ** @code_size
+      next_increase = 2 ** @code_size
 
-      seen           = data.get_varint( data_pos, @code_size )
-      data_pos      += @code_size
-
+      seen = read_code
       @buf << @str_table[ seen ]
 
-      while code = data.get_varint( data_pos, @code_size )
-        data_pos += @code_size
+      while code = read_code
 
         if @block_mode and code == RESET_CODE
           str_reset
 
-          seen = data.get_varint( data_pos, @code_size )
-          data_pos += @code_size
+          seen = read_code
           # warn "reset at #{data_pos} initial code #{@str_table[seen]}"
           next
         end
@@ -317,7 +314,6 @@ module LZW
     # Verify the two magic bytes at the beginning of the stream and read
     # bit and block data from the third.
     def read_magic ( data )
-
       magic = ''
       ( 0 .. 2 ).each do |byte|
         magic << data.get_varint( byte * 8, 8 ).chr
@@ -331,7 +327,12 @@ module LZW
       bits = magic.getbyte(2)
       @max_code_size = bits & MASK_BITS
       @block_mode    = ( ( bits & MASK_BLOCK ) >> 7 ) == 1
+    end
 
+    def read_code
+      code = @data.get_varint @data_pos, @code_size
+      @data_pos += @code_size
+      code
     end
   end
 
