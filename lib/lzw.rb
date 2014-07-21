@@ -116,7 +116,7 @@ module LZW
       last_ratio    = nil
       bytes_in      = 0
       seen          = ''
-      next_increase = 2 ** @code_size
+      @next_increase = 2 ** @code_size
 
       data.each_byte do |byte|
         char      = byte.chr
@@ -126,34 +126,12 @@ module LZW
           seen << char
         else
 
-          if @next_code >= next_increase + 1
-            if @code_size < @max_code_size
-              @code_size    += 1
-              next_increase *= 2
-              warn "encode up to #{@code_size} for next_code #{@next_code} at #{@buf_pos}"
-            else
-              @at_max_code_size = 1
-            end
-          end
-
           @buf.set_varint @buf_pos, @code_size, @code_table[seen]
           @buf_pos += @code_size
 
-          if @at_max_code_size == 0
+          new_code seen + char
 
-            @code_table[seen + char] = @next_code
-            if seen + char == 'ire'
-              warn "stored 'ire' as code #{@next_code} (max #{next_increase}"
-            end
-            @next_code += 1
-          else
-            if @warned.nil?
-              warn "capped for code size #{@next_code}, #{@code_size} / #{@max_code_size}, pos #{@buf_pos}"
-              @warned = 1
-            end
-          end
-
-          if @at_max_code_size == 1 and @block_mode
+          if @at_max_code == 1 and @block_mode
             if checkpoint.nil?
 
               checkpoint = @buf_pos + CHECKPOINT_BITS
@@ -219,9 +197,10 @@ module LZW
         @code_table[i.chr] = i
       end
 
-      @at_max_code_size = 0
+      @at_max_code      = 0
       @code_size        = INIT_CODE_SIZE
       @next_code        = @block_mode ? BL_INIT_CODE : NR_INIT_CODE
+      @next_increase    = 2 ** @code_size
     end
 
     # Prepare the header magic bytes for this stream.
@@ -233,6 +212,27 @@ module LZW
       ).chr
     end
 
+    def new_code ( word )
+      if @next_code >= @next_increase
+        if @code_size < @max_code_size
+          @code_size     += 1
+          @next_increase *= 2
+
+          # warn "encode up to #{@code_size} for next_code #{@next_code} at #{@buf_pos}"
+        else
+          @at_max_code = 1
+        end
+      end
+
+      if @at_max_code == 0
+        @code_table[word] = @next_code
+        @next_code += 1
+      end
+    end
+
+    def write_code ( code )
+
+    end
   end
 
 
@@ -304,28 +304,17 @@ module LZW
         end
 
         seen = code
-        if code == 1024
-          warn "saw code 1024: #{@str_table[code]}"
-        end
         @next_code += 1
 
         if @next_code >= next_increase
           if @code_size < @max_code_size
             @code_size    += 1
             next_increase *= 2
-            warn "decode up to #{@code_size} for next #{@next_code} max #{@max_code_size} at #{data_pos}"
-
-          else
-            if @warned.nil?
-              warn "capped for decode size at #{@next_code}, #{@code_size} / #{@max_code_size} pos #{data_pos}"
-              @warned = 1
-            end
+            # warn "decode up to #{@code_size} for next #{@next_code} max #{@max_code_size} at #{data_pos}"
           end
         end
 
       end
-
-      # puts self.inspect
 
       @buf
     end
