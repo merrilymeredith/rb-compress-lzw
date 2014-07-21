@@ -64,7 +64,7 @@ module LZW
     # The maximum code size, in bits, that compression may scale up to.
     # Default 16.
     #
-    # Valid values are init_code_size(9) to 24.  Values greater than 16 break
+    # Valid values are init_code_size(9) to 31.  Values greater than 16 break
     # compatibility with compress(1).
     # @return [Fixnum]
     attr_reader :max_code_size
@@ -77,8 +77,8 @@ module LZW
       block_mode:     true,
       max_code_size:  16
     )
-      if max_code_size > 24 or max_code_size < INIT_CODE_SIZE
-        raise "max_code_size must be between #{INIT_CODE_SIZE} and 24"
+      if max_code_size > 31 or max_code_size < INIT_CODE_SIZE
+        raise "max_code_size must be between #{INIT_CODE_SIZE} and 31"
       end
 
       @block_mode     = block_mode

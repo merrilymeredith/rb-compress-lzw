@@ -19,7 +19,7 @@ describe LZW::Compressor do
   it "rejects invalid arguments" do
     proc {
       LZW::Compressor.new(
-        max_code_size: 25,
+        max_code_size: 35,
       )
     }.must_raise RuntimeError
 

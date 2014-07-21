@@ -40,4 +40,13 @@ describe LZW::Decompressor do
       ).compress( BIG )
     ).must_equal BIG.b
   end
+
+  it "decompresses exactly at a extended code size, bytewise" do
+    LZW::Decompressor.new(
+    ).decompress(
+      LZW::Compressor.new(
+        max_code_size:  31
+      ).compress( BIG )
+    ).must_equal BIG.b
+  end
 end
