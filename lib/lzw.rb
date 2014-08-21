@@ -54,7 +54,7 @@ module LZW
   # Scaling LZW data compressor with some configurables
   class Compressor
 
-    # (NYI) If true, enables compression in block mode. Default true.
+    # If true, enables compression in block mode. Default true.
     #
     # After reaching {#max_code_size} bits per code, the compression dictionary
     # and code size may be reset if a drop in compression ratio is observed.
@@ -94,15 +94,17 @@ module LZW
     def compress( data )
       reset
 
-      checkpoint    = nil
-      last_ratio    = nil
-      bytes_in      = 0
+      # In block mode, we track compression ratio
+      @checkpoint    = nil
+      @last_ratio    = nil
+      @bytes_in      = 0
+
       seen          = ''
       @next_increase = 2 ** @code_size
 
       data.each_byte do |byte|
         char      = byte.chr
-        bytes_in += 1
+        @bytes_in += 1
 
         if @code_table.has_key? seen + char
           seen << char
@@ -112,33 +114,7 @@ module LZW
 
           new_code seen + char
 
-          if @at_max_code == 1 and @block_mode
-            if checkpoint.nil?
-
-              checkpoint = @buf_pos + CHECKPOINT_BITS
-
-            elsif @buf_pos > checkpoint
-
-              ratio      = bytes_in / ( @buf_pos / 8 )
-              last_ratio = ratio if last_ratio.nil?
-
-              if ratio >= last_ratio
-
-                last_ratio = ratio
-                checkpoint = @buf_pos + CHECKPOINT_BITS
-
-              elsif ratio < last_ratio
-
-                # warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
-                write_code RESET_CODE
-
-                code_reset
-
-                ( checkpoint, last_ratio ) = [ nil, nil ]
-
-              end
-            end
-          end
+          check_ratio_at_cap
 
           seen = char
         end
@@ -149,9 +125,9 @@ module LZW
       @buf.field
     end
 
-    # Reset compressor state.  This is run at the beginning of {#compress},
-    # so it's not necessary for repeated compression, but this allows wiping
-    # the last code table and buffer from the object instance.
+    # Reset compressor state.  This is run at the beginning of {#compress}, so
+    # it's not necessary for repeated compression, but this allows wiping the
+    # last code table and buffer from the object instance.
     def reset
       @buf     = LZW::BitBuf.new
       @buf_pos = 0
@@ -167,9 +143,9 @@ module LZW
 
     private
 
-    # Re-initialize the code table, code size and next code.
-    # This happens at the beginning of compression and whenever
-    # RESET_CODE is added to the stream (block mode).
+    # Re-initialize the code table, code size and next code.  This happens at
+    # the beginning of compression and whenever RESET_CODE is added to the
+    # stream (block mode).
     def code_reset
       @code_table = {}
       ( 0 .. 255 ).each do |i|
@@ -191,6 +167,7 @@ module LZW
       ).chr
     end
 
+    # Store a new code in our table and bump code sizes if necessary.
     def new_code ( word )
       if @next_code >= @next_increase
         if @code_size < @max_code_size
@@ -209,9 +186,43 @@ module LZW
       end
     end
 
+    # Write a code at the current code size and bump the position pointer.
     def write_code ( code )
       @buf.set_varint @buf_pos, @code_size, code
       @buf_pos += @code_size
+    end
+
+    # Once we've reached the max_code_size, if in block mode, issue a code
+    # reset if the compression ratio falls.
+    def check_ratio_at_cap
+      return if !@block_mode
+      return if !@at_max_code
+
+      if @checkpoint.nil?
+
+        @checkpoint = @buf_pos + CHECKPOINT_BITS
+
+      elsif @buf_pos > @checkpoint
+
+        @ratio      = @bytes_in / ( @buf_pos / 8 )
+        @last_ratio = @ratio if @last_ratio.nil?
+
+        if @ratio >= @last_ratio
+
+          @last_ratio = @ratio
+          @checkpoint = @buf_pos + CHECKPOINT_BITS
+
+        elsif @ratio < @last_ratio
+
+          # warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
+          write_code RESET_CODE
+
+          code_reset
+
+          ( @checkpoint, @last_ratio ) = [ nil, nil ]
+
+        end
+      end
     end
 
   end
@@ -220,8 +231,8 @@ module LZW
   # Scaling LZW decompressor
   class Decompressor
 
-    # Given a String(ish) of LZW-compressed data, return the decompressed
-    # data as a String left in "ASCII-8BIT" encoding.
+    # Given a String(ish) of LZW-compressed data, return the decompressed data
+    # as a String left in "ASCII-8BIT" encoding.
     #
     # @param data [String] Compressed input data
     # @return [String]
@@ -234,8 +245,8 @@ module LZW
       read_magic @data
       @data_pos = 24
 
-      # we've read @block_mode from the header now, so make sure our
-      # init_code is set properly
+      # we've read @block_mode from the header now, so make sure our init_code
+      # is set properly
       str_reset
 
       next_increase = 2 ** @code_size
@@ -288,9 +299,8 @@ module LZW
     end
 
     # Reset the state of the decompressor. This is run at the beginning of
-    # {#decompress}, so it's not necessary for reuse of an instance, but
-    # this allows wiping the string code table and buffer from the object
-    # instance.
+    # {#decompress}, so it's not necessary for reuse of an instance, but this
+    # allows wiping the string code table and buffer from the object instance.
     def reset
       @max_code_size = 16
       @buf           = ''.b
@@ -311,8 +321,8 @@ module LZW
       @next_code  = @block_mode ? BL_INIT_CODE : NR_INIT_CODE
     end
 
-    # Verify the two magic bytes at the beginning of the stream and read
-    # bit and block data from the third.
+    # Verify the two magic bytes at the beginning of the stream and read bit
+    # and block data from the third.
     def read_magic ( data )
       magic = ''
       ( 0 .. 2 ).each do |byte|
@@ -337,21 +347,20 @@ module LZW
   end
 
   # Wrap up a String, in binary encoding, for single-bit manipulation and
-  # working with variable-size integers.  This is necessary because our
-  # LZW streams don't align with byte boundaries beyond the 4th byte, they
-  # start writing codes 9 bits at a time (by default) and scale up from that
-  # later.
+  # working with variable-size integers.  This is necessary because our LZW
+  # streams don't align with byte boundaries beyond the 4th byte, they start
+  # writing codes 9 bits at a time (by default) and scale up from that later.
   #
   # Derived from Gene Hsu's work at
-  # https://github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb
-  # but it wasn't worth inheriting from an unaccepted pull to a gem that's
-  # unmaintained.  Mostly, masking out is way smarter than something like
-  # vec() which is what I'm doing in the Perl version of this right now.
+  # https://github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb but
+  # it wasn't worth inheriting from an unaccepted pull to a gem that's
+  # unmaintained.  Mostly, masking out is way smarter than something like vec()
+  # which is what I'm doing in the Perl version of this right now.
   #
   # Compared to bitarray:
-  # I'm forcing this to default-0 for bits, making a fixed size
-  # unnecessary, and supporting both bit orders. And changing the
-  # interface, so I shouldn't subclass anyway.
+  # I'm forcing this to default-0 for bits, making a fixed size unnecessary,
+  # and supporting both bit orders. And changing the interface, so I shouldn't
+  # subclass anyway.
   class BitBuf
     include Enumerable
 
@@ -382,8 +391,8 @@ module LZW
     # @return [Boolean]
     attr_reader :msb_first
 
-    # The string, set to binary encoding, wrapped by this BitBuf.  This
-    # is essentially the "pack"ed form of the bitfield.
+    # The string, set to binary encoding, wrapped by this BitBuf.  This is
+    # essentially the "pack"ed form of the bitfield.
     # @return [String]
     attr_reader :field
 
@@ -401,8 +410,8 @@ module LZW
     end
 
     # Set a specific bit at pos to val. Trying to set a bit beyond the
-    # currently defined {#bytesize} will automatically grow the BitBuf
-    # to the next whole byte needed to include that bit.
+    # currently defined {#bytesize} will automatically grow the BitBuf to the
+    # next whole byte needed to include that bit.
     #
     # @param pos [Numeric] 0-indexed bit position
     # @param val [Numeric] 0 or 1.  2 isn't yet allowed for bits.
@@ -454,9 +463,9 @@ module LZW
       @field.bytesize
     end
 
-    # Store an unsigned integer in of "bits" length, at "pos" position, and
-    # in LSB-first order unless {#msb_first} is true. This method will grow
-    # the BitBuf as necessary, in whole bytes.
+    # Store an unsigned integer in of "bits" length, at "pos" position, and in
+    # LSB-first order unless {#msb_first} is true. This method will grow the
+    # BitBuf as necessary, in whole bytes.
     #
     # @param pos [Numeric] 0-indexed bit position to write the first bit
     # @param width [Numeric] Default 8. The desired size of the supplied
@@ -473,8 +482,8 @@ module LZW
     end
 
     # Fetch an unsigned integer of "width" size from "pos" in the BitBuf.
-    # Unlike other methods, if "pos" is beyond the end of the BitBuf, {nil}
-    # is returned.
+    # Unlike other methods, if "pos" is beyond the end of the BitBuf, {nil} is
+    # returned.
     #
     # @return [Numeric, nil]
     def get_varint ( pos, width = 8 )
@@ -495,8 +504,8 @@ module LZW
 
     private
 
-    # Wraps divmod to always divide by 8 and automatically grow the BitBuf
-    # as soon as we start poking beyond the end.
+    # Wraps divmod to always divide by 8 and automatically grow the BitBuf as
+    # soon as we start poking beyond the end. Side-effecty.
     #
     # @param [Numeric] pos A 0-indexed bit position.
     # @return [Array<Numeric>] byte index, bit offset
