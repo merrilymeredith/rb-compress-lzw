@@ -5,8 +5,12 @@ require "lzw"
 require_relative 'testdata'
 
 describe LZW::Compressor do
+  before do
+    @c = LZW::Compressor.new
+  end
+
   it "can be created with no arguments" do
-    LZW::Compressor.new.must_be_instance_of LZW::Compressor
+    @c.must_be_instance_of LZW::Compressor
   end
 
   it "can be created with all arguments" do
@@ -31,23 +35,21 @@ describe LZW::Compressor do
   end
 
   it "responds to compress and reset" do
-    c = LZW::Compressor.new
-    %w( compress reset ).each { |m| c.must_respond_to m }
+    %w( compress reset ).each { |m| @c.must_respond_to m }
   end
 
-  it "has accessors" do
-    c = LZW::Compressor.new
+  it "has accessors block_mode and max_code_size" do
     %w(
       block_mode max_code_size
-    ).each { |m| c.must_respond_to m }
+    ).each { |m| @c.must_respond_to m }
   end
 
   it "compresses simple data" do
-    LZW::Compressor.new.compress( LOREM ).bytesize.must_be :<, LOREM.bytesize
+    @c.compress( LOREM ).bytesize.must_be :<, LOREM.bytesize
   end
 
   it "compresses big data" do
-    LZW::Compressor.new.compress( BIG ).bytesize.must_be :<, BIG.bytesize
+    @c.compress( BIG ).bytesize.must_be :<, BIG.bytesize
   end
 
   it "compresses at a limited code size" do
