@@ -14,7 +14,7 @@
 module LZW
 
   # compress-lzw gem version
-  VERSION        = '0.0.1'
+  VERSION         = '0.0.1'
 
   MAGIC           = "\037\235".b      # static magic bytes
   MASK_BITS       = 0x1f              # mask for 3rd byte for max_code_size
@@ -37,8 +37,8 @@ module LZW
     #
     # @param data [#each_byte] data to be compressed
     # @return [String] LZW compressed data
-    def compress ( data )
-      LZW::Compressor.new.compress( data )
+    def compress (data)
+      LZW::Compressor.new.compress(data)
     end
 
     # Decompress input with defaults
@@ -46,8 +46,8 @@ module LZW
     # @param data [String] compressed data to be decompressed
     # @return [String] decompressed data
     # @raise [RuntimeException] if there is an error in the compressed stream
-    def decompress ( data )
-      LZW::Decompressor.new.decompress( data )
+    def decompress (data)
+      LZW::Decompressor.new.decompress(data)
     end
   end
   
@@ -77,13 +77,12 @@ module LZW
       block_mode:     true,
       max_code_size:  16
     )
-      if max_code_size > 31 or max_code_size < INIT_CODE_SIZE
-        raise "max_code_size must be between #{INIT_CODE_SIZE} and 31"
+      if max_code_size > 31 || max_code_size < INIT_CODE_SIZE
+        fail "max_code_size must be between #{INIT_CODE_SIZE} and 31"
       end
 
       @block_mode     = block_mode
       @max_code_size  = max_code_size
-
     end
 
     # Given a String(ish) of data, return the LZW-compressed result as another
@@ -91,7 +90,7 @@ module LZW
     #
     # @param data [#each_byte<#chr>] Input data
     # @return [String]
-    def compress( data )
+    def compress(data)
       reset
 
       # In block mode, we track compression ratio
@@ -99,20 +98,19 @@ module LZW
       @last_ratio    = nil
       @bytes_in      = 0
 
-      seen          = ''
-      @next_increase = 2 ** @code_size
+      seen           = ''
+      @next_increase = 2**@code_size
 
       data.each_byte do |byte|
-        char      = byte.chr
+        char       = byte.chr
         @bytes_in += 1
 
-        if @code_table.has_key? seen + char
+        if @code_table.has_key?(seen + char)
           seen << char
         else
+          write_code(@code_table[seen])
 
-          write_code @code_table[seen]
-
-          new_code seen + char
+          new_code(seen + char)
 
           check_ratio_at_cap
 
@@ -120,7 +118,7 @@ module LZW
         end
       end
 
-      write_code @code_table[seen]
+      write_code(@code_table[seen])
 
       @buf.field
     end
@@ -134,7 +132,7 @@ module LZW
       
       # begin with the magic bytes
       magic().each_byte do |b|
-        @buf.set_varint( @buf_pos, 8, b.ord )
+        @buf.set_varint(@buf_pos, 8, b.ord)
         @buf_pos += 8 
       end
 
@@ -148,27 +146,27 @@ module LZW
     # stream (block mode).
     def code_reset
       @code_table = {}
-      ( 0 .. 255 ).each do |i|
+      (0 .. 255).each do |i|
         @code_table[i.chr] = i
       end
 
-      @at_max_code      = 0
-      @code_size        = INIT_CODE_SIZE
-      @next_code        = @block_mode ? BL_INIT_CODE : NR_INIT_CODE
-      @next_increase    = 2 ** @code_size
+      @at_max_code   = 0
+      @code_size     = INIT_CODE_SIZE
+      @next_code     = @block_mode ? BL_INIT_CODE : NR_INIT_CODE
+      @next_increase = 2**@code_size
     end
 
     # Prepare the header magic bytes for this stream.
     # @return [String]
     def magic
       MAGIC + (
-        ( @max_code_size & MASK_BITS ) |
-        ( @block_mode ? MASK_BLOCK : 0 )
+        (@max_code_size & MASK_BITS) |
+        (@block_mode ? MASK_BLOCK : 0)
       ).chr
     end
 
     # Store a new code in our table and bump code sizes if necessary.
-    def new_code ( word )
+    def new_code (word)
       if @next_code >= @next_increase
         if @code_size < @max_code_size
           @code_size     += 1
@@ -187,8 +185,8 @@ module LZW
     end
 
     # Write a code at the current code size and bump the position pointer.
-    def write_code ( code )
-      @buf.set_varint @buf_pos, @code_size, code
+    def write_code (code)
+      @buf.set_varint(@buf_pos, @code_size, code)
       @buf_pos += @code_size
     end
 
@@ -199,28 +197,21 @@ module LZW
       return if !@at_max_code
 
       if @checkpoint.nil?
-
         @checkpoint = @buf_pos + CHECKPOINT_BITS
-
       elsif @buf_pos > @checkpoint
-
-        @ratio      = @bytes_in / ( @buf_pos / 8 )
+        @ratio      = @bytes_in / (@buf_pos / 8)
         @last_ratio = @ratio if @last_ratio.nil?
 
         if @ratio >= @last_ratio
-
           @last_ratio = @ratio
           @checkpoint = @buf_pos + CHECKPOINT_BITS
-
         elsif @ratio < @last_ratio
-
           # warn "writing reset at #{@buf_pos} #{@buf_pos.divmod(8).join(',')}"
-          write_code RESET_CODE
+          write_code(RESET_CODE)
 
           code_reset
 
-          ( @checkpoint, @last_ratio ) = [ nil, nil ]
-
+          @checkpoint, @last_ratio = [nil, nil]
         end
       end
     end
@@ -236,25 +227,25 @@ module LZW
     #
     # @param data [String] Compressed input data
     # @return [String]
-    def decompress ( data )
+    def decompress (data)
       reset
 
-      @data     = LZW::BitBuf.new( field: data )
+      @data     = LZW::BitBuf.new(field: data)
       @data_pos = 0
 
-      read_magic @data
+      read_magic(@data)
       @data_pos = 24
 
       # we've read @block_mode from the header now, so make sure our init_code
       # is set properly
       str_reset
 
-      next_increase = 2 ** @code_size
+      next_increase = 2**@code_size
 
       seen = read_code
       @buf << @str_table[ seen ]
 
-      while code = read_code
+      while (code = read_code)
 
         if @block_mode and code == RESET_CODE
           str_reset
@@ -264,22 +255,19 @@ module LZW
           next
         end
 
-        if word = @str_table.fetch( code, nil )
-          # word = @str_table[ code ]
-
+        if (word = @str_table.fetch(code, nil))
           @buf << word
           
-          @str_table[ @next_code ] = @str_table[ seen ] + word[0,1]
+          @str_table[@next_code] = @str_table[seen] + word[0,1]
 
         elsif code == @next_code
-          word = @str_table[ seen ]
-          @str_table[ code ] = word + word[0,1]
+          word = @str_table[seen]
+          @str_table[code] = word + word[0,1]
 
-          @buf << @str_table[ code ]
+          @buf << @str_table[code]
 
         else
-          raise "(#{code} != #{@next_code}) input may be corrupt at bit #{data_pos - @code_size}"
-
+          fail "(#{code} != #{@next_code}) input may be corrupt at bit #{data_pos - @code_size}"
         end
 
         seen = code
@@ -313,34 +301,34 @@ module LZW
     # Build up the initial string table, reset code size and next code.
     def str_reset
       @str_table = []
-      ( 0 .. 255 ).each do |i|
+      (0 .. 255).each do |i|
         @str_table[i] = i.chr
       end
 
-      @code_size  = INIT_CODE_SIZE
-      @next_code  = @block_mode ? BL_INIT_CODE : NR_INIT_CODE
+      @code_size = INIT_CODE_SIZE
+      @next_code = @block_mode ? BL_INIT_CODE : NR_INIT_CODE
     end
 
     # Verify the two magic bytes at the beginning of the stream and read bit
     # and block data from the third.
-    def read_magic ( data )
+    def read_magic (data)
       magic = ''
-      ( 0 .. 2 ).each do |byte|
-        magic << data.get_varint( byte * 8, 8 ).chr
+      (0 .. 2).each do |byte|
+        magic << data.get_varint(byte * 8, 8).chr
       end
 
-      if magic.bytesize != 3 or magic[0,2] != MAGIC
-        raise "Invalid compress(1) header " +
+      if magic.bytesize != 3 || magic[0,2] != MAGIC
+        fail "Invalid compress(1) header " +
           "(expected #{MAGIC.unpack('h*')}, got #{magic[0,2].unpack('h*')})"
       end
 
-      bits = magic.getbyte(2)
+      bits           = magic.getbyte(2)
       @max_code_size = bits & MASK_BITS
       @block_mode    = ( ( bits & MASK_BLOCK ) >> 7 ) == 1
     end
 
     def read_code
-      code = @data.get_varint @data_pos, @code_size
+      code       = @data.get_varint(@data_pos, @code_size)
       @data_pos += @code_size
       code
     end
@@ -373,7 +361,7 @@ module LZW
       11111011
       11111101
       11111110
-    ].map{|w| [w].pack("b8").getbyte(0) }.freeze
+    ].map{|w| [w].pack('b8').getbyte(0) }.freeze
 
     OR_BITMASK = %w[
       10000000
@@ -384,7 +372,7 @@ module LZW
       00000100
       00000010
       00000001
-    ].map{|w| [w].pack("b8").getbyte(0) }.freeze
+    ].map{|w| [w].pack('b8').getbyte(0) }.freeze
     private_constant :AND_BITMASK, :OR_BITMASK
 
     # If true, {#get_varint} and {#set_varint} work in MSB-first order.
@@ -415,20 +403,24 @@ module LZW
     #
     # @param pos [Numeric] 0-indexed bit position
     # @param val [Numeric] 0 or 1.  2 isn't yet allowed for bits.
-    def []= ( pos, val )
+    def []= (pos, val)
       byte, bit = byte_divmod(pos)
 
       # puts "p:#{pos} B:#{byte} b:#{bit} = #{val}  (#{self[pos]})"
 
       case val
       when 0
-        @field.setbyte( byte,
-                       @field.getbyte(byte) & AND_BITMASK[bit] )
+        @field.setbyte(
+          byte,
+          @field.getbyte(byte) & AND_BITMASK[bit]
+        )
       when 1
-        @field.setbyte( byte,
-                       @field.getbyte(byte) | OR_BITMASK[bit] )
+        @field.setbyte(
+          byte,
+          @field.getbyte(byte) | OR_BITMASK[bit]
+        )
       else
-        raise "Only 0 and 1 are valid for a bit field"
+        fail "Only 0 and 1 are valid for a bit field"
       end
     end
 
@@ -438,15 +430,15 @@ module LZW
     #
     # @param pos [Numeric] 0-indexed bit position
     # @return [Fixnum] the bit value at the requested bit position.
-    def [] ( pos )
+    def [] (pos)
       byte, bit = byte_divmod(pos)
 
-      (@field.getbyte(byte) >> bit ) & 1
+      (@field.getbyte(byte) >> bit) & 1
     end
 
     # Iterate over the BitBuf bitwise.
-    def each ( &block )
-      ( bytesize * 8 ).times do |pos|
+    def each
+      (bytesize * 8).times do |pos|
         yield self[pos]
       end
     end
@@ -471,10 +463,11 @@ module LZW
     # @param width [Numeric] Default 8. The desired size of the supplied
     #   integer. There is no overflow check.
     # @param val [Numeric] The integer value to be stored in the BitBuf.
-    def set_varint ( pos, width = 8, val )
-      raise "integer overflow for #{width} bits: #{val}" if val > (2 ** width)
+    def set_varint (pos, width = 8, val)
+      fail "integer overflow for #{width} bits: #{val}" \
+        if val > 2**width
 
-      ( 0 .. width ).each do |bit_offset|
+      width.times do |bit_offset|
         self[pos + (@msb_first ? (width - bit_offset) : bit_offset)] =
           (val >> bit_offset) & 1
       end
@@ -486,17 +479,13 @@ module LZW
     # returned.
     #
     # @return [Numeric, nil]
-    def get_varint ( pos, width = 8 )
-      if ( pos + width ) > bytesize * 8
-        # warn "bailing at #{pos} + #{width} = #{ pos + width } of #{ bytesize * 8 }"
-        return nil
-      end
+    def get_varint (pos, width = 8)
+      return nil if (pos + width) > bytesize * 8
 
       int = 0
-      ( 0 .. (width - 1) ).each do |bit_offset|
-        int +=
-          self[pos + (@msb_first ? (width - bit_offset) : bit_offset)] *
-          ( 2 ** bit_offset )
+      width.times do |bit_offset|
+        int += 2**bit_offset *
+          self[pos + (@msb_first ? (width - bit_offset) : bit_offset)]
       end
 
       int
@@ -509,14 +498,14 @@ module LZW
     #
     # @param [Numeric] pos A 0-indexed bit position.
     # @return [Array<Numeric>] byte index, bit offset
-    def byte_divmod ( pos )
+    def byte_divmod (pos)
       byte, bit = pos.divmod(8)
 
-      if byte > ( bytesize - 1 )
-        @field <<  "\000" * ( byte - @field.bytesize + 1 ) 
+      if byte > (bytesize - 1)
+        @field <<  "\000" * (byte - @field.bytesize + 1) 
       end
 
-      [ byte, bit ]
+      [byte, bit]
     end
 
   end
