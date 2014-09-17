@@ -25,13 +25,13 @@ describe LZW::Compressor do
       LZW::Compressor.new(
         max_code_size: 35,
       )
-    }.must_raise RuntimeError
+    }.must_raise ArgumentError
 
     proc {
       LZW::Compressor.new(
         max_code_size: 8,
       )
-    }.must_raise RuntimeError
+    }.must_raise ArgumentError
   end
 
   it "responds to compress and reset" do

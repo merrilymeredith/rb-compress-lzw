@@ -30,7 +30,7 @@ describe LZW::Simple do
   it "raises errors for bad input" do
     proc {
       @s.decompress( "foo" )
-    }.must_raise RuntimeError
+    }.must_raise LZW::InputStreamError
   end
 
   it "decompresses big data exactly, bytewise" do

@@ -45,7 +45,7 @@ module LZW
     #
     # @param data [String] compressed data to be decompressed
     # @return [String] decompressed data
-    # @raise [RuntimeException] if there is an error in the compressed stream
+    # @raise [LZW::InputStreamError] if there is an error in the compressed stream
     def decompress (data)
       LZW::Decompressor.new.decompress(data)
     end
@@ -77,8 +77,8 @@ module LZW
       block_mode:     true,
       max_code_size:  16
     )
-      if max_code_size > 31 || max_code_size < INIT_CODE_SIZE
-        fail "max_code_size must be between #{INIT_CODE_SIZE} and 31"
+      unless max_code_size.between?(INIT_CODE_SIZE,31)
+        fail ArgumentError, "max_code_size must be between #{INIT_CODE_SIZE} and 31"
       end
 
       @block_mode     = block_mode
@@ -178,7 +178,7 @@ module LZW
         end
       end
 
-      if @at_max_code == 0
+      if @at_max_code.zero?
         @code_table[word] = @next_code
         @next_code += 1
       end
@@ -227,6 +227,7 @@ module LZW
     #
     # @param data [String] Compressed input data
     # @return [String]
+    # @raise [LZW::InputStreamError] if there is an error in the compressed stream
     def decompress (data)
       reset
 
@@ -267,7 +268,7 @@ module LZW
           @buf << @str_table[code]
 
         else
-          fail "(#{code} != #{@next_code}) input may be corrupt at bit #{data_pos - @code_size}"
+          fail InputStreamError, "(#{code} != #{@next_code}) input may be corrupt at bit #{data_pos - @code_size}"
         end
 
         seen = code
@@ -318,7 +319,7 @@ module LZW
       end
 
       if magic.bytesize != 3 || magic[0,2] != MAGIC
-        fail "Invalid compress(1) header " +
+        fail InputStreamError, "Invalid compress(1) header " +
           "(expected #{MAGIC.unpack('h*')}, got #{magic[0,2].unpack('h*')})"
       end
 
@@ -420,7 +421,7 @@ module LZW
           @field.getbyte(byte) | OR_BITMASK[bit]
         )
       else
-        fail "Only 0 and 1 are valid for a bit field"
+        fail ArgumentError, "Only 0 and 1 are valid for a bit field"
       end
     end
 
@@ -464,7 +465,7 @@ module LZW
     #   integer. There is no overflow check.
     # @param val [Numeric] The integer value to be stored in the BitBuf.
     def set_varint (pos, width = 8, val)
-      fail "integer overflow for #{width} bits: #{val}" \
+      fail ArgumentError, "integer overflow for #{width} bits: #{val}" \
         if val > 2**width
 
       width.times do |bit_offset|
@@ -507,8 +508,10 @@ module LZW
 
       [byte, bit]
     end
-
   end
+
+  # Exception class raised when compressed input is corrupt
+  InputStreamError = Class.new(RuntimeError)
 end
 
 
