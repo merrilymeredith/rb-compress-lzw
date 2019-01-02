@@ -291,10 +291,8 @@ module LZW
     # {#decompress}, so it's not necessary for reuse of an instance, but this
     # allows wiping the string code table and buffer from the object instance.
     def reset
-      @max_code_size = 16
-      @buf           = ''.b
-
-      str_reset
+      @buf       = ''.b
+      @str_table = []
     end
 
     private
