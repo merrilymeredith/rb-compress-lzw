@@ -467,7 +467,7 @@ module LZW
         if val > 2**width
 
       width.times do |bit_offset|
-        self[pos + (@msb_first ? (width - bit_offset) : bit_offset)] =
+        self[pos + (@msb_first ? (width - bit_offset - 1) : bit_offset)] =
           (val >> bit_offset) & 1
       end
       self
