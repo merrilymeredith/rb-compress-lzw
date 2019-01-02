@@ -37,7 +37,7 @@ module LZW
     #
     # @param data [#each_byte] data to be compressed
     # @return [String] LZW compressed data
-    def compress (data)
+    def compress(data)
       LZW::Compressor.new.compress(data)
     end
 
@@ -46,7 +46,7 @@ module LZW
     # @param data [String] compressed data to be decompressed
     # @return [String] decompressed data
     # @raise [LZW::InputStreamError] if there is an error in the compressed stream
-    def decompress (data)
+    def decompress(data)
       LZW::Decompressor.new.decompress(data)
     end
   end
@@ -73,7 +73,7 @@ module LZW
     # 
     # @param block_mode [Boolean] (see {#block_mode})
     # @param max_code_size [Fixnum] (see {#max_code_size})
-    def initialize (
+    def initialize(
       block_mode:     true,
       max_code_size:  16
     )
@@ -166,7 +166,7 @@ module LZW
     end
 
     # Store a new code in our table and bump code sizes if necessary.
-    def new_code (word)
+    def new_code(word)
       if @next_code >= @next_increase
         if @code_size < @max_code_size
           @code_size     += 1
@@ -185,7 +185,7 @@ module LZW
     end
 
     # Write a code at the current code size and bump the position pointer.
-    def write_code (code)
+    def write_code(code)
       @buf.set_varint(@buf_pos, @code_size, code)
       @buf_pos += @code_size
     end
@@ -228,7 +228,7 @@ module LZW
     # @param data [String] Compressed input data
     # @return [String]
     # @raise [LZW::InputStreamError] if there is an error in the compressed stream
-    def decompress (data)
+    def decompress(data)
       reset
 
       @data     = LZW::BitBuf.new(field: data)
@@ -312,7 +312,7 @@ module LZW
 
     # Verify the two magic bytes at the beginning of the stream and read bit
     # and block data from the third.
-    def read_magic (data)
+    def read_magic(data)
       magic = ''
       (0 .. 2).each do |byte|
         magic << data.get_varint(byte * 8, 8).chr
@@ -389,7 +389,7 @@ module LZW
     #   copied with binary encoding.
     # @param msb_first [Boolean] Optionally force bit order used when
     #   writing integers to the bitfield. Default false.
-    def initialize (
+    def initialize(
       field:      "\000",
       msb_first:  false
     )
@@ -404,7 +404,7 @@ module LZW
     #
     # @param pos [Numeric] 0-indexed bit position
     # @param val [Numeric] 0 or 1.  2 isn't yet allowed for bits.
-    def []= (pos, val)
+    def []=(pos, val)
       byte, bit = byte_divmod(pos)
 
       # puts "p:#{pos} B:#{byte} b:#{bit} = #{val}  (#{self[pos]})"
@@ -431,7 +431,7 @@ module LZW
     #
     # @param pos [Numeric] 0-indexed bit position
     # @return [Fixnum] the bit value at the requested bit position.
-    def [] (pos)
+    def [](pos)
       byte, bit = byte_divmod(pos)
 
       (@field.getbyte(byte) >> bit) & 1
@@ -464,7 +464,7 @@ module LZW
     # @param width [Numeric] Default 8. The desired size of the supplied
     #   integer. There is no overflow check.
     # @param val [Numeric] The integer value to be stored in the BitBuf.
-    def set_varint (pos, width = 8, val)
+    def set_varint(pos, width = 8, val)
       fail ArgumentError, "integer overflow for #{width} bits: #{val}" \
         if val > 2**width
 
@@ -480,7 +480,7 @@ module LZW
     # returned.
     #
     # @return [Numeric, nil]
-    def get_varint (pos, width = 8)
+    def get_varint(pos, width = 8)
       return nil if (pos + width) > bytesize * 8
 
       int = 0
@@ -499,7 +499,7 @@ module LZW
     #
     # @param [Numeric] pos A 0-indexed bit position.
     # @return [Array<Numeric>] byte index, bit offset
-    def byte_divmod (pos)
+    def byte_divmod(pos)
       byte, bit = pos.divmod(8)
 
       if byte > (bytesize - 1)
