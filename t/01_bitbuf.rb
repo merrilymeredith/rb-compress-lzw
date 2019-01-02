@@ -81,9 +81,11 @@ describe LZW::BitBuf do
   it "handles bit order when writing integers" do
     l = LZW::BitBuf.new( msb_first: false )
     l.set_varint( 0, 8, 15 )
+    l.to_s.must_equal '11110000'
 
     b = LZW::BitBuf.new( msb_first: true )
     b.set_varint( 0, 8, 15 )
+    b.to_s.must_equal '00001111'
 
     l.field.wont_equal b.field
   end
