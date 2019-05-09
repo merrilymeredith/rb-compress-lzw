@@ -1,5 +1,12 @@
+# compress-lzw
 
-This gem is a ruby implementation of the Lempel-Ziv-Welch compression
+[API Documentation](https://merrilymeredith.github.io/rb-compress-lzw/)
+
+[![CircleCI](https://circleci.com/gh/merrilymeredith/rb-compress-lzw.svg?style=svg)](https://circleci.com/gh/merrilymeredith/rb-compress-lzw)
+
+## About
+
+This gem is a Ruby implementation of the Lempel-Ziv-Welch compression
 algorithm created in 1984.  As of 2004, all patents on it had expired.
 
 This implementation is compatible with the classic unix compress tool, and
@@ -11,12 +18,14 @@ on progressively building a dictionary in the same way as the compressor. It
 also works outside the boundaries of bytes, writing its dictionary codes 9
 bits at a time and scaling up as the codes increase to 16 bits.
 
-**TODO**:
+To get right to work, check out the [LZW::Simple][] class.
+
+[LZW::Simple]: https://merrilymeredith.github.io/rb-compress-lzw/LZW/Simple.html
+
+## TODO
 
 * Code isn't the most efficient, but get impl right first. Buffering with a
 queue of 8 codes makes the packed code always fit an octet boundary.
 * Add a set of tests that tries to find compress binaries installed to use
 for compatibility tests.
-
-To get right to work, check out the LZW::Simple class.
 
