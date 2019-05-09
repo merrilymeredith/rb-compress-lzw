@@ -1,40 +1,40 @@
 version: 2
 jobs:
-    build:
-        docker:
-            - image: circleci/ruby:2.4.1
-        steps:
-            - checkout
-            - run: bundle install
-            - run: bundle exec rake test
-            - run: bundle exec rake yard
-            - persist_to_workspace:
-                root: .
-                paths: doc
-    docs-publish:
-        docker:
-            - image: node:8
-        steps:
-            - checkout
-            - attach_workspace:
-                at: workspace
-            - run: touch workspace/doc/.nojekyll
-            - run: |
-                npm install -g --silent gh-pages@2.0.1
-                git config user.name "ci-build"
-                git config user.email "ci-build@nil"
-            - add_ssh_keys:
-                fingerprints:
-                    - "ee:03:d4:3e:3b:c5:4e:2d:a5:47:25:2d:65:4b:bc:63"
-            - run: gh-pages --dotfiles --message '[skip ci] update' --dist workspace/doc
+  build:
+    docker:
+      - image: circleci/ruby:2.4.1
+    steps:
+      - checkout
+      - run: bundle install
+      - run: bundle exec rake test
+      - run: bundle exec rake yard
+      - persist_to_workspace:
+          root: .
+          paths: doc
+  docs-publish:
+    docker:
+      - image: node:8
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: touch workspace/doc/.nojekyll
+      - run: |
+          npm install -g --silent gh-pages@2.0.1
+          git config user.name "ci-build"
+          git config user.email "ci-build@nil"
+      - add_ssh_keys:
+          fingerprints:
+            - "ee:03:d4:3e:3b:c5:4e:2d:a5:47:25:2d:65:4b:bc:63"
+      - run: gh-pages --dotfiles --message '[skip ci] update' --dist workspace/doc
 workflows:
-    version: 2
-    workflow:
-        jobs:
+  version: 2
+  workflow:
+    jobs:
+      - build
+      - docs-publish:
+          requires:
             - build
-            - docs-publish:
-                requires:
-                    - build
-                filters:
-                    branches:
-                        only: master
+          filters:
+            branches:
+              only: master
