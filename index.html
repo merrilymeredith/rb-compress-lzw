@@ -58,7 +58,17 @@
       </div>
 
       <div id="content"><div id='filecontents'>
-<p>This gem is a ruby implementation of the Lempel-Ziv-Welch compression
+<h1 id="label-compress-lzw">compress-lzw</h1>
+
+<p><a href="https://merrilymeredith.github.io/rb-compress-lzw/">API
+Documentation</a></p>
+
+<p><a href="https://circleci.com/gh/merrilymeredith/rb-compress-lzw"><img
+src="https://circleci.com/gh/merrilymeredith/rb-compress-lzw.svg?style=svg"></a></p>
+
+<h2 id="label-About">About</h2>
+
+<p>This gem is a Ruby implementation of the Lempel-Ziv-Welch compression
 algorithm created in 1984. As of 2004, all patents on it had expired.</p>
 
 <p>This implementation is compatible with the classic unix compress tool, and
@@ -70,7 +80,11 @@ on progressively building a dictionary in the same way as the compressor.
 It also works outside the boundaries of bytes, writing its dictionary codes
 9 bits at a time and scaling up as the codes increase to 16 bits.</p>
 
-<p><strong>TODO</strong>:</p>
+<p>To get right to work, check out the <a
+href="https://merrilymeredith.github.io/rb-compress-lzw/LZW/Simple.html">LZW::Simple</a>
+class.</p>
+
+<h2 id="label-TODO">TODO</h2>
 <ul><li>
 <p>Code isn&#39;t the most efficient, but get impl right first. Buffering with
 a queue of 8 codes makes the packed code always fit an octet boundary.</p>
@@ -78,12 +92,10 @@ a queue of 8 codes makes the packed code always fit an octet boundary.</p>
 <p>Add a set of tests that tries to find compress binaries installed to use
 for compatibility tests.</p>
 </li></ul>
-
-<p>To get right to work, check out the LZW::Simple class.</p>
 </div></div>
 
       <div id="footer">
-  Generated on Thu May  9 06:43:19 2019 by
+  Generated on Thu May  9 06:50:44 2019 by
   <a href="http://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.19 (ruby-2.4.1).
 </div>
