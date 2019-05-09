@@ -107,22 +107,11 @@
 <h2>Overview</h2><div class="docstring">
   <div class="discussion">
     
-<p>Wrap up a String, in binary encoding, for single-bit manipulation and
-working with variable-size integers.  This is necessary because our LZW
-streams don&#39;t align with byte boundaries beyond the 4th byte, they
-start writing codes 9 bits at a time (by default) and scale up from that
-later.</p>
+<p>Wrap up a String, in binary encoding, for single-bit manipulation and working with variable-size integers.  This is necessary because our LZW streams don&#39;t align with byte boundaries beyond the 4th byte, they start writing codes 9 bits at a time (by default) and scale up from that later.</p>
 
-<p>Derived from Gene Hsu&#39;s work at <a
-href="https://github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb">github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb</a>
-but it wasn&#39;t worth inheriting from an unaccepted pull to a gem
-that&#39;s unmaintained.  Mostly, masking out is way smarter than something
-like vec() which is what I&#39;m doing in the Perl version of this right
-now.</p>
+<p>Derived from Gene Hsu&#39;s work at <a href="https://github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb">github.com/genehsu/bitarray/blob/master/lib/bitarray/string.rb</a> but it wasn&#39;t worth inheriting from an unaccepted pull to a gem that&#39;s unmaintained.  Mostly, masking out is way smarter than something like vec() which is what I&#39;m doing in the Perl version of this right now.</p>
 
-<p>Compared to bitarray: I&#39;m forcing this to default-0 for bits, making a
-fixed size unnecessary, and supporting both bit orders. And changing the
-interface, so I shouldn&#39;t subclass anyway.</p>
+<p>Compared to bitarray: I&#39;m forcing this to default-0 for bits, making a fixed size unnecessary, and supporting both bit orders. And changing the interface, so I shouldn&#39;t subclass anyway.</p>
 
 
   </div>
@@ -377,8 +366,7 @@ interface, so I shouldn&#39;t subclass anyway.</p>
 
   
     <span class="summary_desc"><div class='inline'>
-<p>Store an unsigned integer in of “bits” length, at “pos” position, and in
-LSB-first order unless <span class='object_link'><a href="#msb_first-instance_method" title="LZW::BitBuf#msb_first (method)">#msb_first</a></span> is true.</p>
+<p>Store an unsigned integer in of “bits” length, at “pos” position, and in LSB-first order unless <span class='object_link'><a href="#msb_first-instance_method" title="LZW::BitBuf#msb_first (method)">#msb_first</a></span> is true.</p>
 </div></span>
   
 </li>
@@ -463,8 +451,7 @@ LSB-first order unless <span class='object_link'><a href="#msb_first-instance_me
       
         &mdash;
         <div class='inline'>
-<p>Optionally force bit order used when writing integers to the bitfield.
-Default false.</p>
+<p>Optionally force bit order used when writing integers to the bitfield. Default false.</p>
 </div>
       
     </li>
@@ -578,8 +565,7 @@ Default false.</p>
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>The string, set to binary encoding, wrapped by this BitBuf.  This is
-essentially the “pack”ed form of the bitfield.</p>
+<p>The string, set to binary encoding, wrapped by this BitBuf.  This is essentially the “pack”ed form of the bitfield.</p>
 
 
   </div>
@@ -696,9 +682,7 @@ essentially the “pack”ed form of the bitfield.</p>
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Read a bit at pos.  Trying to read a bit beyond the currently defined
-<span class='object_link'><a href="#bytesize-instance_method" title="LZW::BitBuf#bytesize (method)">#bytesize</a></span> will automatically grow the BitBuf to the next whole byte
-needed to include that bit.</p>
+<p>Read a bit at pos.  Trying to read a bit beyond the currently defined <span class='object_link'><a href="#bytesize-instance_method" title="LZW::BitBuf#bytesize (method)">#bytesize</a></span> will automatically grow the BitBuf to the next whole byte needed to include that bit.</p>
 
 
   </div>
@@ -781,9 +765,7 @@ needed to include that bit.</p>
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Set a specific bit at pos to val. Trying to set a bit beyond the currently
-defined <span class='object_link'><a href="#bytesize-instance_method" title="LZW::BitBuf#bytesize (method)">#bytesize</a></span> will automatically grow the BitBuf to the next whole
-byte needed to include that bit.</p>
+<p>Set a specific bit at pos to val. Trying to set a bit beyond the currently defined <span class='object_link'><a href="#bytesize-instance_method" title="LZW::BitBuf#bytesize (method)">#bytesize</a></span> will automatically grow the BitBuf to the next whole byte needed to include that bit.</p>
 
 
   </div>
@@ -939,8 +921,7 @@ byte needed to include that bit.</p>
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Fetch an unsigned integer of “width” size from “pos” in the BitBuf. Unlike
-other methods, if “pos” is beyond the end of the BitBuf, nil is returned.</p>
+<p>Fetch an unsigned integer of “width” size from “pos” in the BitBuf. Unlike other methods, if “pos” is beyond the end of the BitBuf, nil is returned.</p>
 
 
   </div>
@@ -1010,9 +991,7 @@ other methods, if “pos” is beyond the end of the BitBuf, nil is returned.</p
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Store an unsigned integer in of “bits” length, at “pos” position, and in
-LSB-first order unless <span class='object_link'><a href="#msb_first-instance_method" title="LZW::BitBuf#msb_first (method)">#msb_first</a></span> is true. This method will grow the
-BitBuf as necessary, in whole bytes.</p>
+<p>Store an unsigned integer in of “bits” length, at “pos” position, and in LSB-first order unless <span class='object_link'><a href="#msb_first-instance_method" title="LZW::BitBuf#msb_first (method)">#msb_first</a></span> is true. This method will grow the BitBuf as necessary, in whole bytes.</p>
 
 
   </div>
@@ -1050,8 +1029,7 @@ BitBuf as necessary, in whole bytes.</p>
       
         &mdash;
         <div class='inline'>
-<p>Default 8. The desired size of the supplied integer. There is no overflow
-check.</p>
+<p>Default 8. The desired size of the supplied integer. There is no overflow check.</p>
 </div>
       
     </li>
@@ -1156,9 +1134,9 @@ check.</p>
 </div>
 
       <div id="footer">
-  Generated on Thu May  9 06:50:44 2019 by
+  Generated on Thu May  9 07:28:33 2019 by
   <a href="http://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.19 (ruby-2.4.1).
+  0.9.19 (ruby-2.6.3).
 </div>
 
     </div>

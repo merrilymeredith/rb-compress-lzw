@@ -100,44 +100,31 @@
 <p>LZW decompressor in the same vein</p>
 </dd><dt><span class='object_link'><a href="LZW/BitBuf.html" title="LZW::BitBuf (class)">BitBuf</a></span>
 <dd>
-<p>An abstraction for modifying a String bitwise and  with unsigned integers
-at arbitrary offsets and sizes.</p>
+<p>An abstraction for modifying a String bitwise and  with unsigned integers at arbitrary offsets and sizes.</p>
 </dd></dl>
 
 <p>
 <h1 id="label-compress-lzw">compress-lzw</h1>
 
-<p><a href="https://merrilymeredith.github.io/rb-compress-lzw/">API
-Documentation</a></p>
+<p><a href="https://merrilymeredith.github.io/rb-compress-lzw/">API Documentation</a></p>
 
-<p><a href="https://circleci.com/gh/merrilymeredith/rb-compress-lzw"><img
-src="https://circleci.com/gh/merrilymeredith/rb-compress-lzw.svg?style=svg"></a></p>
+<p><a href="https://circleci.com/gh/merrilymeredith/rb-compress-lzw"><img src="https://circleci.com/gh/merrilymeredith/rb-compress-lzw.svg?style=svg"></a></p>
 
 <h2 id="label-About">About</h2>
 
-<p>This gem is a Ruby implementation of the Lempel-Ziv-Welch compression
-algorithm created in 1984. As of 2004, all patents on it had expired.</p>
+<p>This gem is a Ruby implementation of the Lempel-Ziv-Welch compression algorithm created in 1984. As of 2004, all patents on it had expired.</p>
 
-<p>This implementation is compatible with the classic unix compress tool, and
-<em>not</em> compatible with the LZW compression used within GIF streams.</p>
+<p>This implementation is compatible with the classic unix compress tool, and <em>not</em> compatible with the LZW compression used within GIF streams.</p>
 
-<p>LZW is notable in two ways: it is dictionary-based compression but does not
-need to pass that dictionary within its files, instead decompression relies
-on progressively building a dictionary in the same way as the compressor.
-It also works outside the boundaries of bytes, writing its dictionary codes
-9 bits at a time and scaling up as the codes increase to 16 bits.</p>
+<p>LZW is notable in two ways: it is dictionary-based compression but does not need to pass that dictionary within its files, instead decompression relies on progressively building a dictionary in the same way as the compressor. It also works outside the boundaries of bytes, writing its dictionary codes 9 bits at a time and scaling up as the codes increase to 16 bits.</p>
 
-<p>To get right to work, check out the <a
-href="https://merrilymeredith.github.io/rb-compress-lzw/LZW/Simple.html">LZW::Simple</a>
-class.</p>
+<p>To get right to work, check out the <a href="https://merrilymeredith.github.io/rb-compress-lzw/LZW/Simple.html">LZW::Simple</a> class.</p>
 
 <h2 id="label-TODO">TODO</h2>
 <ul><li>
-<p>Code isn&#39;t the most efficient, but get impl right first. Buffering with
-a queue of 8 codes makes the packed code always fit an octet boundary.</p>
+<p>Code isn&#39;t the most efficient, but get impl right first. Buffering with a queue of 8 codes makes the packed code always fit an octet boundary.</p>
 </li><li>
-<p>Add a set of tests that tries to find compress binaries installed to use
-for compatibility tests.</p>
+<p>Add a set of tests that tries to find compress binaries installed to use for compatibility tests.</p>
 </li></ul>
 </p>
 
@@ -221,9 +208,9 @@ for compatibility tests.</p>
 </div>
 
       <div id="footer">
-  Generated on Thu May  9 06:50:44 2019 by
+  Generated on Thu May  9 07:28:33 2019 by
   <a href="http://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.19 (ruby-2.4.1).
+  0.9.19 (ruby-2.6.3).
 </div>
 
     </div>
