@@ -206,7 +206,8 @@
 
   
     <span class="summary_desc"><div class='inline'>
-<p>Given a String(ish) of data, return the LZW-compressed result as another String.</p>
+<p>Given a String(ish) of data, return the LZW-compressed result as another
+String.</p>
 </div></span>
   
 </li>
@@ -382,7 +383,8 @@
     
 <p>If true, enables compression in block mode. Default true.</p>
 
-<p>After reaching <span class='object_link'><a href="#max_code_size-instance_method" title="LZW::Compressor#max_code_size (method)">#max_code_size</a></span> bits per code, the compression dictionary and code size may be reset if a drop in compression ratio is observed.</p>
+<p>After reaching <span class='object_link'><a href="#max_code_size-instance_method" title="LZW::Compressor#max_code_size (method)">#max_code_size</a></span> bits per code, the compression dictionary
+and code size may be reset if a drop in compression ratio is observed.</p>
 
 
   </div>
@@ -438,9 +440,11 @@
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>The maximum code size, in bits, that compression may scale up to. Default 16.</p>
+<p>The maximum code size, in bits, that compression may scale up to. Default
+16.</p>
 
-<p>Valid values are init_code_size(9) to 31.  Values greater than 16 break compatibility with compress(1).</p>
+<p>Valid values are init_code_size(9) to 31.  Values greater than 16 break
+compatibility with compress(1).</p>
 
 
   </div>
@@ -501,7 +505,8 @@
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Given a String(ish) of data, return the LZW-compressed result as another String.</p>
+<p>Given a String(ish) of data, return the LZW-compressed result as another
+String.</p>
 
 
   </div>
@@ -633,7 +638,9 @@
 </h3><div class="docstring">
   <div class="discussion">
     
-<p>Reset compressor state.  This is run at the beginning of <span class='object_link'><a href="#compress-instance_method" title="LZW::Compressor#compress (method)">#compress</a></span>, so it&#39;s not necessary for repeated compression, but this allows wiping the last code table and buffer from the object instance.</p>
+<p>Reset compressor state.  This is run at the beginning of <span class='object_link'><a href="#compress-instance_method" title="LZW::Compressor#compress (method)">#compress</a></span>, so
+it&#39;s not necessary for repeated compression, but this allows wiping the
+last code table and buffer from the object instance.</p>
 
 
   </div>
@@ -685,9 +692,9 @@
 </div>
 
       <div id="footer">
-  Generated on Thu May  9 00:48:04 2019 by
+  Generated on Thu May  9 06:43:20 2019 by
   <a href="http://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.19 (ruby-2.6.2).
+  0.9.19 (ruby-2.4.1).
 </div>
 
     </div>
